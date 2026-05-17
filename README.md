@@ -1,0 +1,151 @@
+# ZeroPinyin
+
+ZeroPinyin 是一个为 **.NET 10+** 设计的高性能、零内存分配的即时中文拼音匹配引擎。
+
+通过将非确定性有限状态自动机 (NFA) 压缩至 `ulong` 位运算，配合现代 C# 的底层内存控制特性（如 `Span<T>`、`ref locals`、`[InlineArray]`），能够在极低延迟下完成数百万行文本的拼音扫描，且搜索过程中不产生垃圾回收与内存分配。
+
+## 📦 安装 (NuGet)
+
+```bash
+dotnet add package ZeroPinyin
+```
+
+## ✨ 主要特性
+
+* **多模式匹配**：支持 `Contains`、`StartsWith`、`EndsWith`、`IsMatch` 和 `CountMatches`。
+* **首字母缩写**：支持极简拼音首字母匹配（如搜索 `zg` 匹配 `中国`）。
+* **多音字支持**：内置拼音数据来自[pinyin-data](https://github.com/mozillazg/pinyin-data)，支持常见多音字（如 `重庆` 匹配 `chongqing` 和 `zhongqing`）。
+* **容错机制**：
+  * **模糊音支持**：可选开启声母（zh/z, sh/s, n/l 等）和韵母（an/ang, in/ing 等）的模糊匹配。
+  * **中英混拼**：支持中文、拼音、数字混搭搜索（如 `zhong国123` 匹配 `中国123`），且自带同音字容错。
+  * **大小写不敏感**：忽略搜索串的大小写。
+  * **音调匹配**：支持附加数字音调精确搜索（如 `yang2mao2` 匹配 `羊毛`）。
+* ⚠️ **注意**：由于采用 `ulong` 寄存器作为底层状态机，单次搜索的字符串最大长度被硬性限制为 **63 个字符**，这对于大部分的即时匹配场景已经足够。
+
+## 🛠 技术路线与底层优化
+
+1. **NFA 状态机位运算压缩（Bit-Parallel NFA）**：将搜索关键词编译为扁平化的二维状态掩码矩阵，在单个 `ulong` 内动态计算子集。
+2. **零分配搜索 (Zero Allocation)**：
+   * 搜索方法全量使用 `ReadOnlySpan<char>`。
+   * 循环体内部使用 `ref locals`、`MemoryMarshal` 和 `Unsafe.Add` 规避所有的数组边界检查。
+   * 利用 `allows ref struct` 泛型约束，通过 `AlternateLookup` 实现无装箱的 `ReadOnlySpan<char>` 字典缓存查询。
+3. **SIMD 硬件加速前置过滤**：利用 .NET 的 `SearchValues<char>`（底层基于向量化指令如 AVX2），在匹配开始前极速跳过不相关的文本，加速在长文本中寻找稀疏匹配项的过程。
+4. **极致的内存结构布局**：
+   * 在初始化解析拼音字典时，使用 `[InlineArray]` 结合 `[StructLayout(Pack = 1)]`，将多音字状态原位压缩至最小结构体。
+   * 利用基于换行符计数的算法提前分配 `Dictionary` 与 `List` 的容量，尽量消除内部数组扩容带来的堆碎片（Gen1/Gen2 回收）。
+
+## 🚀 快速起步
+
+### 1. 基础用法
+
+```csharp
+using ZeroPinyin;
+
+// 自带单例，内部已做好状态机的缓存
+var matcher = PinyinMatcher.Default;
+
+// 基础匹配
+bool result1 = matcher.Contains("羊毛", "yangmao"); // True
+bool result2 = matcher.StartsWith("羊毛", "yang");     // True
+bool result3 = matcher.EndsWith("薅羊毛", "mao");        // True
+
+// 首字母与多音字
+bool result4 = matcher.Contains("中华人民共和国", "zhrmghg"); // True
+bool result5 = matcher.Contains("长江", "zhangjiang");      // True (多音字:长)
+
+// 混合匹配与容错
+bool result6 = matcher.Contains("中国", "zhong国"); // True
+bool result7 = matcher.Contains("知识", "zisi");    // True (默认开启模糊音)
+```
+
+### 2. 自定义模糊音配置
+
+如果你需要严谨的匹配（例如关闭平翘舌模糊音）：
+
+```csharp
+var fuzzyOff = new FuzzyConfig { 
+    EnableFuzzyInitials = false, 
+    EnableFuzzyFinals = false 
+};
+var strictMatcher = new PinyinMatcher(HanziPinyinMap.Default, fuzzyOff);
+
+strictMatcher.Contains("知识", "zhishi"); // True
+strictMatcher.Contains("知识", "zisi");   // False
+```
+
+### 3. 自定义拼音数据
+
+如果内置拼音数据不满足需求（如需要添加特殊生僻字或自定义发音），可以轻松注入自己的文本：
+
+```csharp
+var myData = "U+4E2D: zhong1,zhong4\nU+56FD: guo2"; // 也可使用原始的拼音数据，比如"U+4E2D: zhōng,zhòng"
+var customMap = new HanziPinyinMap(myData);
+var customMatcher = new PinyinMatcher(customMap);
+```
+
+## 📊 性能基准测试
+
+以下测试运行于 **.NET 10.0 SDK** (X64 RyuJIT)，对比了在两组来自[PinIn](https://github.com/Towdium/PinIn)的数据集下执行拼音匹配的性能。
+
+* **large.txt**：13.5 MiB，1,000,000 行文本
+* **small.txt**：866.0 KiB，37,450 行文本
+
+```
+BenchmarkDotNet v0.15.8, Linux CachyOS
+Intel Core i5-9300H CPU 2.40GHz (Max: 0.80GHz), 1 CPU, 8 logical and 4 physical cores
+.NET SDK 10.0.300
+  [Host]     : .NET 10.0.8 (10.0.8, 10.0.826.23019), X64 RyuJIT x86-64-v3
+  Job-XPUURG : .NET 10.0.8 (10.0.8, 10.0.826.23019), X64 RyuJIT x86-64-v3
+
+IterationCount=10  WarmupCount=5  
+```
+
+| Method       | Query   | FileParam | Size      | Lines     | Mean        | Error     | StdDev   | Gen0     | Gen1     | Gen2     | Allocated |
+|------------- |-------- |---------- |----------:|----------:|------------:|----------:|---------:|---------:|---------:|---------:|----------:|
+| **Init**         | **yangmao** | **large.txt** |  **13.5 MiB** | **1,000,000** | **22,198.2 μs** |  **66.04 μs** | **34.54 μs** |  **62.5000** |        **-** |        **-** | **1665400 B** |
+| Contains     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 26,926.0 μs | 132.01 μs | 87.31 μs |        - |        - |        - |         - |
+| CountMatches | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,853.9 μs |  77.53 μs | 51.28 μs |        - |        - |        - |         - |
+| StartsWith   | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,710.7 μs |  54.00 μs | 35.71 μs |        - |        - |        - |         - |
+| EndsWith     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 27,225.6 μs | 130.95 μs | 86.61 μs |        - |        - |        - |         - |
+| IsMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,343.4 μs |  26.02 μs | 17.21 μs |        - |        - |        - |         - |
+| **Init**         | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **22,571.9 μs** | **119.15 μs** | **78.81 μs** | **218.7500** | **156.2500** | **156.2500** | **1666921 B** |
+| Contains     | yangmao | small.txt | 866.0 KiB |    37,450 |  1,116.2 μs |   3.51 μs |  2.32 μs |        - |        - |        - |         - |
+| CountMatches | yangmao | small.txt | 866.0 KiB |    37,450 |  1,181.5 μs |   7.30 μs |  4.83 μs |        - |        - |        - |         - |
+| StartsWith   | yangmao | small.txt | 866.0 KiB |    37,450 |    298.0 μs |   2.06 μs |  1.36 μs |        - |        - |        - |         - |
+| EndsWith     | yangmao | small.txt | 866.0 KiB |    37,450 |  1,112.9 μs |   6.97 μs |  4.61 μs |        - |        - |        - |         - |
+| IsMatch      | yangmao | small.txt | 866.0 KiB |    37,450 |    299.4 μs |   1.61 μs |  1.06 μs |        - |        - |        - |         - |
+
+<details>
+<summary><b>点击查看数据字段说明</b></summary>
+
+```text
+  Query     : 测试使用的拼音
+  FileParam : 测试使用的文本文件
+  Size      : 测试文本的大小
+  Lines     : 测试文本的行数，每行单独调用匹配方法
+  Mean      : 所有测量结果的算术平均值
+  Error     : 99.9%置信区间的一半
+  StdDev    : 所有测量结果的标准差
+  Gen0      : 每1000次操作中第0代垃圾回收次数
+  Gen1      : 每1000次操作中第1代垃圾回收次数
+  Gen2      : 每1000次操作中第2代垃圾回收次数
+  Allocated : 单次操作分配的内存（仅托管内存，包含所有分配，1KB = 1024B）
+  1 μs      : 1微秒（0.000001秒）
+```
+</details>
+
+### 测试结论说明：
+* **`Init`（初始化）**：启动阶段构建`HanziPinyinMap`与`PinyinMatcher`耗时极低（约 22ms），一次性分配约 1.58 MiB 内存，此后字典数据常驻内存供复用。
+* **搜索过程（Allocated = `-`）**：在搜索方法执行时，**堆内存分配为 0 Byte**，这意味着哪怕以极高频率并发搜索，也不会给垃圾回收器（GC）带来任何压力。
+* **高吞吐量**：在 100 万行（13.5 MiB）文本的 `Contains` 遍历搜索中，耗时仅需约 25 毫秒（即每秒可扫描处理近 4000 万行文本）。
+
+## 📦 依赖与兼容性
+
+* 运行时：**.NET 10.0+**。
+* 语言版本：**C# 14+**。
+* 无第三方依赖。
+* 内置[pinyin-data](https://github.com/mozillazg/pinyin-data)的拼音数据文件（约 4.4 万汉字），也可使用自定义拼音数据构建`HanziPinyinMap`。
+
+## 📄 开源协议
+
+本项目采用 [MIT License](LICENSE) 开源协议。

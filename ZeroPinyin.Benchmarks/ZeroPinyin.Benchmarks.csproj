@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZeroPinyin\ZeroPinyin.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\Resource\small.txt" Link="Resource\small.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\Resource\large.txt" Link="Resource\large.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
