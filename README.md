@@ -102,18 +102,18 @@ IterationCount=10  WarmupCount=5
 
 | Method       | Query   | FileParam | Size      | Lines     | Mean        | Error     | StdDev   | Gen0     | Gen1     | Gen2     | Allocated |
 |------------- |-------- |---------- |----------:|----------:|------------:|----------:|---------:|---------:|---------:|---------:|----------:|
-| **Init**         | **yangmao** | **large.txt** |  **13.5 MiB** | **1,000,000** | **22,198.2 μs** |  **66.04 μs** | **34.54 μs** |  **62.5000** |        **-** |        **-** | **1665400 B** |
-| Contains     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 26,926.0 μs | 132.01 μs | 87.31 μs |        - |        - |        - |         - |
-| CountMatches | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,853.9 μs |  77.53 μs | 51.28 μs |        - |        - |        - |         - |
-| StartsWith   | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,710.7 μs |  54.00 μs | 35.71 μs |        - |        - |        - |         - |
-| EndsWith     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 27,225.6 μs | 130.95 μs | 86.61 μs |        - |        - |        - |         - |
-| IsMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,343.4 μs |  26.02 μs | 17.21 μs |        - |        - |        - |         - |
-| **Init**         | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **22,571.9 μs** | **119.15 μs** | **78.81 μs** | **218.7500** | **156.2500** | **156.2500** | **1666921 B** |
-| Contains     | yangmao | small.txt | 866.0 KiB |    37,450 |  1,116.2 μs |   3.51 μs |  2.32 μs |        - |        - |        - |         - |
-| CountMatches | yangmao | small.txt | 866.0 KiB |    37,450 |  1,181.5 μs |   7.30 μs |  4.83 μs |        - |        - |        - |         - |
-| StartsWith   | yangmao | small.txt | 866.0 KiB |    37,450 |    298.0 μs |   2.06 μs |  1.36 μs |        - |        - |        - |         - |
-| EndsWith     | yangmao | small.txt | 866.0 KiB |    37,450 |  1,112.9 μs |   6.97 μs |  4.61 μs |        - |        - |        - |         - |
-| IsMatch      | yangmao | small.txt | 866.0 KiB |    37,450 |    299.4 μs |   1.61 μs |  1.06 μs |        - |        - |        - |         - |
+| **Init**         | **yangmao** | **large.txt** |  **13.5 MiB** | **1,000,000** | **22,670.5 μs** |  **94.32 μs** | **56.13 μs** |  **62.5000** |        **-** |        **-** | **1665400 B** |
+| Contains     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 26,664.0 μs |  50.04 μs | 33.10 μs |        - |        - |        - |         - |
+| CountMatches | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,417.2 μs | 142.09 μs | 93.98 μs |        - |        - |        - |         - |
+| StartsWith   | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,655.7 μs |  62.53 μs | 41.36 μs |        - |        - |        - |         - |
+| EndsWith     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,826.3 μs | 113.77 μs | 75.25 μs |        - |        - |        - |         - |
+| IsMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,948.3 μs |  54.16 μs | 35.82 μs |        - |        - |        - |         - |
+| **Init**         | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **22,609.5 μs** | **116.45 μs** | **69.30 μs** | **218.7500** | **156.2500** | **156.2500** | **1666921 B** |
+| Contains     | yangmao | small.txt | 866.0 KiB |    37,450 |  1,113.3 μs |   7.81 μs |  5.16 μs |        - |        - |        - |         - |
+| CountMatches | yangmao | small.txt | 866.0 KiB |    37,450 |  1,086.3 μs |   7.32 μs |  4.84 μs |        - |        - |        - |         - |
+| StartsWith   | yangmao | small.txt | 866.0 KiB |    37,450 |    290.3 μs |   1.00 μs |  0.66 μs |        - |        - |        - |         - |
+| EndsWith     | yangmao | small.txt | 866.0 KiB |    37,450 |    865.3 μs |   2.05 μs |  1.36 μs |        - |        - |        - |         - |
+| IsMatch      | yangmao | small.txt | 866.0 KiB |    37,450 |    282.0 μs |   1.53 μs |  1.01 μs |        - |        - |        - |         - |
 
 <details>
 <summary><b>点击查看数据字段说明</b></summary>

@@ -8,6 +8,7 @@ namespace ZeroPinyin;
 public sealed class PinyinQuery {
 	public string SearchText { get; }
 
+	private readonly int _searchLength;
 	private readonly int _shift;
 	private readonly ulong _acceptMask;
 	private readonly ulong[] _flatTransitions;
@@ -20,9 +21,10 @@ public sealed class PinyinQuery {
 		}
 
 		SearchText = search.ToString();
+		var searchLength = _searchLength = search.Length;
 		_map = map;
-		var stateCount = search.Length + 1;
-		_acceptMask = 1UL << search.Length;
+		var stateCount = searchLength + 1;
+		_acceptMask = 1UL << searchLength;
 		var classCount = map.ClassCount;
 
 		var stride = (int)BitOperations.RoundUpToPowerOf2((uint)stateCount);
@@ -33,7 +35,7 @@ public sealed class PinyinQuery {
 		var (intKeys, intRanges, intValues) = (prefixData.IntKeys, prefixData.IntRanges, prefixData.IntValues);
 		var (endKeys, endRanges, endValues) = (prefixData.EndKeys, prefixData.EndRanges, prefixData.EndValues);
 
-		for (var s = 0; s < search.Length; s++) {
+		for (var s = 0; s < searchLength; s++) {
 			var c = search[s];
 			var lowerClass = map.CharToClass[c];
 			if (lowerClass != 0) {
@@ -41,7 +43,7 @@ public sealed class PinyinQuery {
 			}
 
 			if (IsPinyinChar(c)) {
-				var maxLen = Math.Min(7, search.Length - s);
+				var maxLen = Math.Min(7, searchLength - s);
 				ulong encoded = 0;
 
 				for (var len = 1; len <= maxLen; len++) {
@@ -52,7 +54,7 @@ public sealed class PinyinQuery {
 
 					encoded |= b << (len - 1) * 8;
 
-					var isEnd = s + len == search.Length;
+					var isEnd = s + len == searchLength;
 					var keys = isEnd ? endKeys : intKeys;
 					var ranges = isEnd ? endRanges : intRanges;
 					var values = isEnd ? endValues : intValues;
@@ -190,13 +192,16 @@ public sealed class PinyinQuery {
 		}
 
 		ulong current = 0, acceptMask = _acceptMask;
-		int shift = _shift, len = text.Length;
+		int shift = _shift, len = text.Length, startIdx = len - _searchLength;
+		if (startIdx < 0) {
+			startIdx = 0;
+		}
 
 		ref var textRef = ref MemoryMarshal.GetReference(text);
 		ref var charToClassRef = ref MemoryMarshal.GetArrayDataReference(_map.CharToClass);
 		ref var transRef = ref MemoryMarshal.GetArrayDataReference(_flatTransitions);
 
-		for (var i = 0; i < len; i++) {
+		for (var i = startIdx; i < len; i++) {
 			if (current == 0) {
 				if (_fastForwardChars is null) {
 					return false;
