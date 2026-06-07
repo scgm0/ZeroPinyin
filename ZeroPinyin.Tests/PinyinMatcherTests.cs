@@ -17,6 +17,7 @@ public class PinyinMatcherTests {
 	[Theory]
 	[InlineData("羊毛", "yang", true)]
 	[InlineData("薅羊毛", "yang", false)]
+	[InlineData("羊毛", "羊", true)]
 	[InlineData("abc", "ab", true)]
 	[InlineData("abc", "bc", false)]
 	public void StartsWith_ShouldMatchCorrectly(string text, string search, bool expected) {
@@ -26,6 +27,7 @@ public class PinyinMatcherTests {
 	[Theory]
 	[InlineData("薅羊毛", "mao", true)]
 	[InlineData("羊毛布", "mao", false)]
+	[InlineData("薅羊毛", "毛", true)]
 	[InlineData("abc", "bc", true)]
 	[InlineData("abc", "ab", false)]
 	public void EndsWith_ShouldMatchCorrectly(string text, string search, bool expected) {
@@ -34,6 +36,7 @@ public class PinyinMatcherTests {
 
 	[Theory]
 	[InlineData("羊毛", "yangmao", true)]
+	[InlineData("羊毛", "羊毛", true)]
 	[InlineData("abc", "abc", true)]
 	[InlineData("羊毛布", "yangmao", false)]
 	[InlineData("", "anything", false)]
@@ -44,6 +47,7 @@ public class PinyinMatcherTests {
 
 	[Theory]
 	[InlineData("羊毛羊毛", "yangmao", 2)]
+	[InlineData("羊毛羊毛", "羊毛", 2)]
 	[InlineData("羊毛出在羊身上", "yang", 2)]
 	[InlineData("ababab", "ab", 3)]
 	[InlineData("abc", "d", 0)]
@@ -95,7 +99,6 @@ public class PinyinMatcherTests {
 
 	[Theory]
 	[InlineData("中国", "zhong国", true)] // 拼音汉字混拼
-	[InlineData("忠帼", "zhong国", true)] // 隐式同音字容错
 	[InlineData("数字123", "123", true)] // ASCII数字穿插
 	[InlineData("测试!", "test!", false)] // 搜索串中有特殊符号时，如果原串没有，则不匹配
 	[InlineData("测试!", "测试!", true)] // 精确匹配原字符
@@ -198,6 +201,33 @@ public class PinyinMatcherTests {
 		var early = _matcher.Compile("pinyin_0");
 		var recompiled = _matcher.Compile("pinyin_0");
 		Assert.Same(early, recompiled);
+	}
+
+	#endregion
+
+	#region 5. 中文精确匹配测试 (ExactMatchForHanzi)
+
+	[Theory]
+	[InlineData("中国", "中国", true)]
+	[InlineData("中国", "中guo", true)] // 汉字拼音混合，'中'字精确匹配，'国'走拼音匹配
+	[InlineData("中华人民共和国", "中华rmghg", true)]
+	[InlineData("忠帼", "中国", false)] // 即使拼音都是 'zhong guo'，但 '忠' != '中'，'帼' != '国'
+	[InlineData("忠帼", "zhong国", false)] // 搜索词包含了汉字'国'，必须精确匹配'国'
+	[InlineData("忠帼", "中guo", false)] // 搜索词包含了汉字'中'，必须精确匹配'中'
+	public void ExactMatchForHanzi_DefaultTrue_ShouldRejectHomophones(string text, string search, bool expected) {
+		// 默认配置下，搜索词中出现的汉字必须精确匹配，拒绝隐式的同音字映射
+		Assert.Equal(expected, _matcher.Contains(text, search));
+	}
+
+	[Fact]
+	public void ExactMatchForHanzi_False_ShouldAllowHomophones() {
+		// 测试关闭中文字符精确匹配：会将搜索词中的中文作为其拼音处理（等同于隐式同音字）
+		var config = new FuzzyConfig { ExactMatchForHanzi = false };
+		var looseMatcher = new PinyinMatcher(HanziPinyinMap.Default, config);
+
+		Assert.True(looseMatcher.Contains("忠帼", "中国")); // "忠帼" 的拼音和 "中国" 相同，允许匹配
+		Assert.True(looseMatcher.Contains("忠帼", "zhong国"));
+		Assert.True(looseMatcher.Contains("羊矛", "羊毛")); // "矛" 的拼音和 "毛" 相同，允许匹配
 	}
 
 	#endregion

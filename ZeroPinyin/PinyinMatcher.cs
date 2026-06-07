@@ -5,12 +5,12 @@ namespace ZeroPinyin;
 public sealed class PinyinMatcher {
 	private readonly HanziPinyinMap _map;
 	private readonly PinyinPrefixData _prefixData;
+	private readonly FuzzyConfig _config;
 
 	private string? _lastSearchString;
 	private PinyinQuery? _lastSearchQuery;
 
 	private readonly Dictionary<string, PinyinQuery> _cache = new(StringComparer.Ordinal);
-
 	private readonly Dictionary<string, PinyinQuery>.AlternateLookup<ReadOnlySpan<char>> _cacheLookup;
 
 	private readonly string?[] _fifoKeys = new string?[1024];
@@ -21,7 +21,8 @@ public sealed class PinyinMatcher {
 
 	public PinyinMatcher(HanziPinyinMap map, FuzzyConfig? fuzzy = null) {
 		_map = map;
-		_prefixData = PrefixMapBuilder.Build(map, fuzzy ?? FuzzyConfig.Default);
+		_config = fuzzy ?? FuzzyConfig.Default;
+		_prefixData = PrefixMapBuilder.Build(map, _config);
 		_cacheLookup = _cache.GetAlternateLookup<ReadOnlySpan<char>>();
 	}
 
@@ -61,7 +62,7 @@ public sealed class PinyinMatcher {
 				return q;
 			}
 
-			q = new(search, _map, _prefixData);
+			q = new(search, _map, _prefixData, _config);
 
 			var oldest = _fifoKeys[_fifoIndex];
 			if (oldest is not null) {
