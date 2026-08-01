@@ -4,12 +4,18 @@ using System.Runtime.InteropServices;
 
 namespace ZeroPinyin;
 
+/// <summary>汉字到拼音音节集合的映射表（字符 → 音节组合类），由拼音数据构建。</summary>
 public sealed class HanziPinyinMap {
+	/// <summary>字符到音节组合类的映射（65536 项，0 表示无拼音）。</summary>
 	public readonly ushort[] CharToClass = new ushort[65536];
+	/// <summary>所有音节的扁平存储（按类区间组织）。</summary>
 	public readonly PinyinSyllable[] FlatSyllables;
+	/// <summary>每类的音节区间（前 256 项为 ASCII 字符类）。</summary>
 	public readonly PinyinRange[] ClassRanges;
+	/// <summary>音节组合类的总数。</summary>
 	public readonly int ClassCount;
 
+	/// <summary>内置拼音数据（pinyin-data，约 4.4 万汉字）。</summary>
 	public static string DefaultPinyinData {
 		get {
 			if (field is not null) {
@@ -22,6 +28,7 @@ public sealed class HanziPinyinMap {
 			return field = reader.ReadToEnd();
 		}
 	}
+	/// <summary>使用内置拼音数据构建的默认映射表（单例）。</summary>
 	public static HanziPinyinMap Default { get; } = new(DefaultPinyinData);
 
 	[InlineArray(16)]
@@ -58,6 +65,10 @@ public sealed class HanziPinyinMap {
 		}
 	}
 
+	/// <summary>
+	/// 从拼音数据文本构建映射表。每行格式："U+4E2D: zhong1,zhong4" 或 "U+4E2D: zhōng,zhòng"（支持声调符号与 ü）。
+	/// </summary>
+	/// <param name="text">拼音数据文本。</param>
 	public HanziPinyinMap(ReadOnlySpan<char> text) {
 		var lineCount = text.Count('\n');
 		if (lineCount == 0 && text.Length > 0) {
@@ -117,7 +128,7 @@ public sealed class HanziPinyinMap {
 					continue;
 				}
 
-				var normLen = RemoveToneMarks(seg, sharedBuf);
+				var normLen = PinyinParser.RemoveToneMarks(seg, sharedBuf);
 				var syl = PinyinParser.Parse(sharedBuf[..normLen]);
 				if (!syl.IsValid) {
 					continue;
@@ -164,48 +175,5 @@ public sealed class HanziPinyinMap {
 		FlatSyllables = [.. allSyllablesList];
 		ClassRanges = [.. classRangesList];
 		ClassCount = classRangesList.Count;
-	}
-
-	static private int RemoveToneMarks(ReadOnlySpan<char> input, Span<char> buf) {
-		int pos = 0, tone = 0;
-		foreach (var c in input) {
-			var (b, t) = c switch {
-				'ā' => ('a', 1),
-				'á' => ('a', 2),
-				'ǎ' => ('a', 3),
-				'à' => ('a', 4),
-				'ē' => ('e', 1),
-				'é' => ('e', 2),
-				'ě' => ('e', 3),
-				'è' => ('e', 4),
-				'ī' => ('i', 1),
-				'í' => ('i', 2),
-				'ǐ' => ('i', 3),
-				'ì' => ('i', 4),
-				'ō' => ('o', 1),
-				'ó' => ('o', 2),
-				'ǒ' => ('o', 3),
-				'ò' => ('o', 4),
-				'ū' => ('u', 1),
-				'ú' => ('u', 2),
-				'ǔ' => ('u', 3),
-				'ù' => ('u', 4),
-				'ǖ' => ('v', 1),
-				'ǘ' => ('v', 2),
-				'ǚ' => ('v', 3),
-				'ǜ' => ('v', 4),
-				_ => (c, 0)
-			};
-			buf[pos++] = b;
-			if (t != 0) {
-				tone = t;
-			}
-		}
-
-		if (tone > 0) {
-			buf[pos++] = (char)('0' + tone);
-		}
-
-		return pos;
 	}
 }

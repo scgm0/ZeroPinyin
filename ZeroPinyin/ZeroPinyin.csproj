@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <Title>ZeroPinyin</Title>
         <Authors>神麤詭末</Authors>
         <Description>一个高性能、零内存分配的即时中文拼音匹配引擎</Description>

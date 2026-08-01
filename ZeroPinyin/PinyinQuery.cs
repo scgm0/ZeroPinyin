@@ -5,7 +5,11 @@ using System.Runtime.InteropServices;
 
 namespace ZeroPinyin;
 
+/// <summary>
+/// 编译后的拼音查询（不可变）：持有 NFA 转换矩阵并提供多模式匹配，全部方法零内存分配。
+/// </summary>
 public sealed class PinyinQuery {
+	/// <summary>搜索串原文（规范化后）。</summary>
 	public string SearchText { get; }
 
 	private readonly int _searchLength;
@@ -18,6 +22,13 @@ public sealed class PinyinQuery {
 	private readonly ulong _exactMatchMask;
 	private readonly char[]? _exactChars;
 
+	/// <summary>
+	/// 编译搜索串（通常通过 <see cref="PinyinMatcher.Compile"/> 获得，带缓存）。
+	/// </summary>
+	/// <param name="search">拼音搜索串（不超过 63 个字符）。</param>
+	/// <param name="map">汉字拼音映射表。</param>
+	/// <param name="prefixData">拼音前缀索引。</param>
+	/// <param name="config">模糊配置。</param>
 	public PinyinQuery(ReadOnlySpan<char> search, HanziPinyinMap map, PinyinPrefixData prefixData, FuzzyConfig config) {
 		if (search.Length >= 64) {
 			throw new ArgumentException("搜索字符串过长（最多63个字符）");
@@ -152,6 +163,7 @@ public sealed class PinyinQuery {
 		}
 	}
 
+	/// <summary>判断文本中是否包含搜索串的拼音匹配。</summary>
 	[SkipLocalsInit]
 	public bool Contains(ReadOnlySpan<char> text) {
 		if (text.IsEmpty || _fastForwardChars is null) {
@@ -208,6 +220,7 @@ public sealed class PinyinQuery {
 		return false;
 	}
 
+	/// <summary>统计文本中不重叠匹配的数量。</summary>
 	[SkipLocalsInit]
 	public int CountMatches(ReadOnlySpan<char> text) {
 		if (text.IsEmpty || _fastForwardChars is null) {
@@ -266,6 +279,204 @@ public sealed class PinyinQuery {
 		return matchCount;
 	}
 
+	/// <summary>
+	/// 返回文本中第一个匹配的起始索引，无匹配时返回 -1。
+	/// 匹配区间为不重叠语义（与 <see cref="CountMatches"/> 一致）。
+	/// </summary>
+	/// <param name="text">待搜索文本。</param>
+	/// <returns>匹配起始索引，或 -1。</returns>
+	[SkipLocalsInit]
+	public int FindFirstIndex(ReadOnlySpan<char> text) {
+		if (text.IsEmpty || _fastForwardChars is null) {
+			return -1;
+		}
+
+		ulong current = 0, acceptMask = _acceptMask;
+		int shift = _shift, len = text.Length;
+
+		ref var textRef = ref MemoryMarshal.GetReference(text);
+		ref var charToClassRef = ref MemoryMarshal.GetArrayDataReference(_map.CharToClass);
+		ref var transRef = ref MemoryMarshal.GetArrayDataReference(_flatTransitions);
+
+		Span<int> startPos = stackalloc int[64];
+		startPos.Fill(-1);
+
+		for (var i = 0; i < len; i++) {
+			if (current == 0) {
+				var pos = text[i..].IndexOfAny(_fastForwardChars);
+				if (pos < 0) {
+					return -1;
+				}
+
+				i += pos;
+			}
+
+			var charCls = Unsafe.Add(ref charToClassRef, Unsafe.Add(ref textRef, i));
+			ref var stateTransRef = ref Unsafe.Add(ref transRef, (nint)charCls << shift);
+			var next = stateTransRef;
+
+			var initBits = next;
+			while (initBits != 0) {
+				var t = BitOperations.TrailingZeroCount(initBits);
+				initBits &= initBits - 1;
+				startPos[t] = i;
+			}
+
+			var bits = current & ~acceptMask;
+			while (bits != 0) {
+				var s = BitOperations.TrailingZeroCount(bits);
+				bits &= bits - 1;
+				var rowBits = Unsafe.Add(ref stateTransRef, s);
+				var newBits = rowBits & ~next;
+				while (newBits != 0) {
+					var t = BitOperations.TrailingZeroCount(newBits);
+					newBits &= newBits - 1;
+					if (startPos[t] == -1 || startPos[s] < startPos[t]) {
+						startPos[t] = startPos[s];
+					}
+				}
+
+				next |= rowBits;
+			}
+
+			if ((next & _exactMatchMask) != 0) {
+				var exactCheck = next & _exactMatchMask;
+				var textChar = Unsafe.Add(ref textRef, i);
+				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
+				while (exactCheck != 0) {
+					var s = BitOperations.TrailingZeroCount(exactCheck);
+					exactCheck &= exactCheck - 1;
+					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
+						next &= ~(1UL << s);
+					}
+				}
+			}
+
+			if ((next & acceptMask) != 0) {
+				return startPos[_searchLength];
+			}
+
+			current = next;
+		}
+
+		return -1;
+	}
+
+	/// <summary>
+	/// 枚举文本中所有不重叠匹配的区间（与 <see cref="CountMatches"/> 计数语义一致），零分配。
+	/// </summary>
+	/// <param name="text">待搜索文本。</param>
+	/// <returns>匹配区间枚举器。</returns>
+	public MatchEnumerator AllMatches(ReadOnlySpan<char> text) => new(this, text);
+
+	/// <summary>
+	/// 匹配区间枚举器，用于遍历 <see cref="PinyinQuery.AllMatches"/> 的结果。
+	/// </summary>
+	public ref struct MatchEnumerator {
+		private readonly PinyinQuery _q;
+		private ReadOnlySpan<char> _text;
+		private int _index;
+		private MatchRange _current;
+
+		internal MatchEnumerator(PinyinQuery q, ReadOnlySpan<char> text) {
+			_q = q;
+			_text = text;
+			_index = 0;
+			_current = default;
+		}
+
+		/// <summary>当前匹配区间。</summary>
+		public readonly MatchRange Current => _current;
+
+		/// <summary>
+		/// 前进到下一个匹配区间。
+		/// </summary>
+		/// <returns>存在下一个匹配时为 true。</returns>
+		[SkipLocalsInit]
+		public bool MoveNext() {
+			var q = _q;
+			var text = _text;
+			if (text.IsEmpty || q._fastForwardChars is null) {
+				return false;
+			}
+
+			ulong current = 0, acceptMask = q._acceptMask;
+			int shift = q._shift, len = text.Length;
+			var start = _index;
+
+			ref var textRef = ref MemoryMarshal.GetReference(text);
+			ref var charToClassRef = ref MemoryMarshal.GetArrayDataReference(q._map.CharToClass);
+			ref var transRef = ref MemoryMarshal.GetArrayDataReference(q._flatTransitions);
+
+			Span<int> startPos = stackalloc int[64];
+			startPos.Fill(-1);
+
+			for (var i = start; i < len; i++) {
+				if (current == 0) {
+					var pos = text[i..].IndexOfAny(q._fastForwardChars);
+					if (pos < 0) {
+						return false;
+					}
+
+					i += pos;
+				}
+
+				var charCls = Unsafe.Add(ref charToClassRef, Unsafe.Add(ref textRef, i));
+				ref var stateTransRef = ref Unsafe.Add(ref transRef, (nint)charCls << shift);
+				var next = stateTransRef;
+
+				var initBits = next;
+				while (initBits != 0) {
+					var t = BitOperations.TrailingZeroCount(initBits);
+					initBits &= initBits - 1;
+					startPos[t] = i;
+				}
+
+				var bits = current & ~acceptMask;
+				while (bits != 0) {
+					var s = BitOperations.TrailingZeroCount(bits);
+					bits &= bits - 1;
+					var rowBits = Unsafe.Add(ref stateTransRef, s);
+					var newBits = rowBits & ~next;
+					while (newBits != 0) {
+						var t = BitOperations.TrailingZeroCount(newBits);
+						newBits &= newBits - 1;
+						if (startPos[t] == -1 || startPos[s] < startPos[t]) {
+							startPos[t] = startPos[s];
+						}
+					}
+
+					next |= rowBits;
+				}
+
+				if ((next & q._exactMatchMask) != 0) {
+					var exactCheck = next & q._exactMatchMask;
+					var textChar = Unsafe.Add(ref textRef, i);
+					ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(q._exactChars!);
+					while (exactCheck != 0) {
+						var s = BitOperations.TrailingZeroCount(exactCheck);
+						exactCheck &= exactCheck - 1;
+						if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
+							next &= ~(1UL << s);
+						}
+					}
+				}
+
+				if ((next & acceptMask) != 0) {
+					var mStart = startPos[q._searchLength];
+					_current = new MatchRange(mStart, i + 1 - mStart);
+					_index = i + 1;
+					return true;
+				}
+
+				current = next;
+			}
+
+			return false;
+		}
+	}
+
+	/// <summary>判断文本是否以搜索串的拼音匹配结束。</summary>
 	[SkipLocalsInit]
 	public bool EndsWith(ReadOnlySpan<char> text) {
 		if (text.IsEmpty || _fastForwardChars is null) {
@@ -325,6 +536,7 @@ public sealed class PinyinQuery {
 		return false;
 	}
 
+	/// <summary>判断文本是否以搜索串的拼音匹配开始。</summary>
 	[SkipLocalsInit]
 	public bool StartsWith(ReadOnlySpan<char> text) {
 		if (text.IsEmpty) {
@@ -376,6 +588,7 @@ public sealed class PinyinQuery {
 		return false;
 	}
 
+	/// <summary>判断整个文本是否与搜索串完全匹配。</summary>
 	[SkipLocalsInit]
 	public bool IsMatch(ReadOnlySpan<char> text) {
 		if (text.IsEmpty) {
