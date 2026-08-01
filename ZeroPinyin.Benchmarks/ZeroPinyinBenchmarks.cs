@@ -17,7 +17,7 @@ public class ZeroPinyinBenchmarks {
 		yield return new("large.txt");
 	}
 
-	[Params("yangmao")]
+	[Params("yangmao", "zhrmghg", "zhong国123")]
 	public required string Query { get; set; }
 
 	[GlobalSetup]
@@ -98,6 +98,37 @@ public class ZeroPinyinBenchmarks {
 
 		foreach (var line in lines) {
 			if (matcher.IsMatch(line, query)) count++;
+		}
+
+		return count;
+	}
+
+	[Benchmark]
+	public int FindFirstIndex() {
+		var count = 0;
+		var lines = _lines;
+		var query = Query;
+		var matcher = _matcher;
+
+		foreach (var line in lines) {
+			if (matcher.FindFirstIndex(line, query) >= 0) count++;
+		}
+
+		return count;
+	}
+
+	[Benchmark]
+	public int AllMatches() {
+		var count = 0;
+		var lines = _lines;
+		var query = Query;
+		var matcher = _matcher;
+
+		foreach (var line in lines) {
+			var matches = matcher.AllMatches(line, query);
+			while (matches.MoveNext()) {
+				count++;
+			}
 		}
 
 		return count;

@@ -33,8 +33,10 @@ public static class QuickBenchmark {
 		// 2. 热循环：small.txt 逐行匹配，预热 3 轮后取 5 轮中位数
 		var hotMatcher = PinyinMatcher.Default;
 		Console.WriteLine($"Contains_small_ms={Measure(lines, hotMatcher, "yangmao", 0):F1}");
-		Console.WriteLine($"StartsWith_small_ms={Measure(lines, hotMatcher, "yangmao", 1):F1}");
-		Console.WriteLine($"IsMatch_small_ms={Measure(lines, hotMatcher, "yangmao", 2):F1}");
+		Console.WriteLine($"CountMatches_small_ms={Measure(lines, hotMatcher, "yangmao", 1):F1}");
+		Console.WriteLine($"StartsWith_small_ms={Measure(lines, hotMatcher, "yangmao", 2):F1}");
+		Console.WriteLine($"EndsWith_small_ms={Measure(lines, hotMatcher, "yangmao", 3):F1}");
+		Console.WriteLine($"IsMatch_small_ms={Measure(lines, hotMatcher, "yangmao", 4):F1}");
 
 		// 3. 多线程缓存命中：预编译 64 个查询，8 线程各 100k 次命中
 		{
@@ -83,7 +85,13 @@ public static class QuickBenchmark {
 					matcher.Contains(line, query);
 					break;
 				case 1:
+					matcher.CountMatches(line, query);
+					break;
+				case 2:
 					matcher.StartsWith(line, query);
+					break;
+				case 3:
+					matcher.EndsWith(line, query);
 					break;
 				default:
 					matcher.IsMatch(line, query);
