@@ -122,21 +122,28 @@ public class ZeroPinyinBenchmarks {
 			}
 		}
 
-		var tasks = new Task<long>[8];
-		for (var t = 0; t < tasks.Length; t++) {
-			tasks[t] = Task.Run(() => {
+		var results = new long[8];
+		var threads = new Thread[8];
+		for (var t = 0; t < threads.Length; t++) {
+			var idx = t;
+			threads[t] = new Thread(() => {
 				var n = 0L;
 				for (var i = 0; i < 100_000; i++) {
 					var q = matcher.Compile(queries[i & 63]);
 					n += q.SearchText.Length;
 				}
-				return n;
+
+				results[idx] = n;
 			});
+			threads[t].Start();
 		}
 
-		Task.WaitAll(tasks);
+		foreach (var thread in threads) {
+			thread.Join();
+		}
+
 		var total = 0L;
-		foreach (var task in tasks) total += task.Result;
+		foreach (var r in results) total += r;
 		return total;
 	}
 }
