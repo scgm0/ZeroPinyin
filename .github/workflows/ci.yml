@@ -85,7 +85,7 @@ jobs:
               f.write('| Method | File | Mean | Allocated |\n')
               f.write('|---|---|---|---|\n')
               for r in rows:
-                  f.write('| %s %s | %s | %s |\n' % (r['Method'], r.get('FileParam', '-'), r['Mean'], r.get('Allocated', '-')))
+                  f.write('| %s | %s | %s | %s |\n' % (r['Method'], r.get('FileParam', '-'), r['Mean'], r.get('Allocated', '-')))
           " "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
