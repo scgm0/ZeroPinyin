@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [master, test]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 功能测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: 构建
+        run: dotnet build ZeroPinyin.Tests/ZeroPinyin.Tests.csproj -c Release
+      - name: 运行测试
+        run: |
+          ./ZeroPinyin.Tests/bin/Release/net10.0/ZeroPinyin.Tests 2>&1 | tee test-output.txt
+      - name: 写入 Job Summary
+        run: |
+          echo "## 功能测试" >> "$GITHUB_STEP_SUMMARY"
+          grep "Total:" test-output.txt | sed 's/^[[:space:]]*//' | sed 's/\x1b\[[0-9;]*m//g' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.txt
+
+  bench-quick:
+    name: 性能快速探测
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: 运行快速性能探测
+        run: |
+          set -o pipefail
+          dotnet run --project ZeroPinyin.Benchmarks/ZeroPinyin.Benchmarks.csproj -c Release -- --quick 2>&1 | tee quick-bench.txt
+      - name: 写入 Job Summary
+        run: |
+          echo "## 性能快速探测" >> "$GITHUB_STEP_SUMMARY"
+          echo '| 指标 | 值 |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---|' >> "$GITHUB_STEP_SUMMARY"
+          while IFS='=' read -r key value; do
+            echo "| $key | $value |" >> "$GITHUB_STEP_SUMMARY"
+          done < quick-bench.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quick-bench
+          path: quick-bench.txt
+
+  bench-full:
+    name: 完整 BenchmarkDotNet
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: 运行完整基准
+        run: |
+          set -o pipefail
+          dotnet run --project ZeroPinyin.Benchmarks/ZeroPinyin.Benchmarks.csproj -c Release 2>&1 | tee bench-full.log
+      - name: 写入 Job Summary
+        run: |
+          echo "## 完整 BenchmarkDotNet" >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "
+          import csv, sys
+          out = sys.argv[1]
+          rows = []
+          for fn in ('ZeroPinyin.Benchmarks.ZeroPinyinBenchmarks-report.csv', 'ZeroPinyin.Benchmarks.ZeroPinyinCompileBenchmarks-report.csv'):
+              try:
+                  with open('BenchmarkDotNet.Artifacts/results/' + fn) as fh:
+                      rows += list(csv.DictReader(fh))
+              except FileNotFoundError:
+                  pass
+          with open(out, 'a') as f:
+              f.write('| Method | File | Mean | Allocated |\n')
+              f.write('|---|---|---|---|\n')
+              for r in rows:
+                  f.write('| %s %s | %s | %s |\n' % (r['Method'], r.get('FileParam', '-'), r['Mean'], r.get('Allocated', '-')))
+          " "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: BenchmarkDotNet.Artifacts/results/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-full-log
+          path: bench-full.log
