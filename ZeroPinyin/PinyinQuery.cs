@@ -319,7 +319,9 @@ public sealed class PinyinQuery {
 			while (initBits != 0) {
 				var t = BitOperations.TrailingZeroCount(initBits);
 				initBits &= initBits - 1;
-				startPos[t] = i;
+				if (startPos[t] == -1 || i < startPos[t]) {
+					startPos[t] = i;
+				}
 			}
 
 			var bits = current & ~acceptMask;
@@ -429,7 +431,9 @@ public sealed class PinyinQuery {
 				while (initBits != 0) {
 					var t = BitOperations.TrailingZeroCount(initBits);
 					initBits &= initBits - 1;
-					startPos[t] = i;
+					if (startPos[t] == -1 || i < startPos[t]) {
+						startPos[t] = i;
+					}
 				}
 
 				var bits = current & ~acceptMask;
