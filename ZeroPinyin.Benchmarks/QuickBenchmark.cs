@@ -5,6 +5,8 @@ namespace ZeroPinyin.Benchmarks;
 
 public static class QuickBenchmark {
 	public static void Run() {
+		Console.WriteLine($"Env={RuntimeInformation.OSDescription};Cores={Environment.ProcessorCount}");
+
 		var map = HanziPinyinMap.Default;
 		var lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Resource", "small.txt"));
 
@@ -30,7 +32,6 @@ public static class QuickBenchmark {
 
 		// 2. 热循环：small.txt 逐行匹配，预热 3 轮后取 5 轮中位数
 		var hotMatcher = PinyinMatcher.Default;
-		Console.WriteLine($"Env={RuntimeInformation.OSDescription};Cores={Environment.ProcessorCount}");
 		Console.WriteLine($"Contains_small_ms={Measure(lines, hotMatcher, "yangmao", 0):F1}");
 		Console.WriteLine($"StartsWith_small_ms={Measure(lines, hotMatcher, "yangmao", 1):F1}");
 		Console.WriteLine($"IsMatch_small_ms={Measure(lines, hotMatcher, "yangmao", 2):F1}");

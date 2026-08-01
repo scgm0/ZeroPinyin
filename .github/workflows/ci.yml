@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: 构建
@@ -25,7 +25,7 @@ jobs:
         run: |
           echo "## 功能测试" >> "$GITHUB_STEP_SUMMARY"
           grep "Total:" test-output.txt | sed 's/^[[:space:]]*//' | sed 's/\x1b\[[0-9;]*m//g' >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: test-output
           path: test-output.txt
@@ -35,8 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: 运行快速性能探测
@@ -51,7 +51,7 @@ jobs:
           while IFS='=' read -r key value; do
             echo "| $key | $value |" >> "$GITHUB_STEP_SUMMARY"
           done < quick-bench.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: quick-bench
           path: quick-bench.txt
@@ -61,8 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: 运行完整基准
@@ -87,12 +87,12 @@ jobs:
               for r in rows:
                   f.write('| %s | %s | %s | %s |\n' % (r['Method'], r.get('FileParam', '-'), r['Mean'], r.get('Allocated', '-')))
           " "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: BenchmarkDotNet.Artifacts/results/
           if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: bench-full-log
           path: bench-full.log

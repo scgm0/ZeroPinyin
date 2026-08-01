@@ -17,7 +17,6 @@ public class ZeroPinyinBenchmarks {
 		yield return new("large.txt");
 	}
 
-	[Params("yangmao")]
 	public string Query { get; set; } = "yangmao";
 
 	[GlobalSetup]
@@ -104,6 +103,7 @@ public class ZeroPinyinBenchmarks {
 	}
 
 	private int _coldCounter;
+	private bool _hotQueriesReady;
 	private readonly string[] _hotQueries = new string[64];
 
 	[Benchmark]
@@ -115,18 +115,20 @@ public class ZeroPinyinBenchmarks {
 	public long MultiThreadCacheHit() {
 		var matcher = _matcher;
 		var queries = _hotQueries;
-		if (queries[0] is null) {
+		if (!_hotQueriesReady) {
 			for (var i = 0; i < queries.Length; i++) {
 				queries[i] = $"q_{i}";
 				matcher.Compile(queries[i]);
 			}
+
+			_hotQueriesReady = true;
 		}
 
 		var results = new long[8];
 		var threads = new Thread[8];
 		for (var t = 0; t < threads.Length; t++) {
 			var idx = t;
-			threads[t] = new Thread(() => {
+			threads[t] = new(() => {
 				var n = 0L;
 				for (var i = 0; i < 100_000; i++) {
 					var q = matcher.Compile(queries[i & 63]);
@@ -143,7 +145,10 @@ public class ZeroPinyinBenchmarks {
 		}
 
 		var total = 0L;
-		foreach (var r in results) total += r;
+		foreach (var r in results) {
+			total += r;
+		}
+
 		return total;
 	}
 }
