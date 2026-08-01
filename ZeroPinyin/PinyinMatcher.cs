@@ -84,7 +84,7 @@ public sealed class PinyinMatcher {
 		search.IsEmpty ? 0 : text.IsEmpty ? -1 : GetOrCompileSpan(search).FindFirstIndex(text);
 
 	/// <summary>
-	/// 枚举文本中所有不重叠匹配的区间，零分配。
+	/// 枚举文本中所有不重叠匹配的区间。
 	/// </summary>
 	/// <param name="text">待搜索文本。</param>
 	/// <param name="search">拼音搜索串。</param>

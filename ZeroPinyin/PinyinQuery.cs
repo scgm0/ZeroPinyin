@@ -365,7 +365,7 @@ public sealed class PinyinQuery {
 	}
 
 	/// <summary>
-	/// 枚举文本中所有不重叠匹配的区间（与 <see cref="CountMatches"/> 计数语义一致），零分配。
+	/// 枚举文本中所有不重叠匹配的区间（与 <see cref="CountMatches"/> 计数语义一致）。
 	/// </summary>
 	/// <param name="text">待搜索文本。</param>
 	/// <returns>匹配区间枚举器。</returns>
