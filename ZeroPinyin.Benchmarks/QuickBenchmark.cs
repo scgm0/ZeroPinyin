@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ZeroPinyin.Benchmarks;
 
@@ -27,11 +28,12 @@ public static class QuickBenchmark {
 			Console.WriteLine($"ColdCompile_alloc_kb={bestAlloc / 1024}");
 		}
 
-		// 2. 热循环：small.txt 逐行匹配，预热 3 轮后取 5 轮最小值
+		// 2. 热循环：small.txt 逐行匹配，预热 3 轮后取 5 轮中位数
 		var hotMatcher = PinyinMatcher.Default;
-		Console.WriteLine($"Contains_small_ms={Measure(lines, l => hotMatcher.Contains(l, "yangmao")):F1}");
-		Console.WriteLine($"StartsWith_small_ms={Measure(lines, l => hotMatcher.StartsWith(l, "yangmao")):F1}");
-		Console.WriteLine($"IsMatch_small_ms={Measure(lines, l => hotMatcher.IsMatch(l, "yangmao")):F1}");
+		Console.WriteLine($"Env={RuntimeInformation.OSDescription};Cores={Environment.ProcessorCount}");
+		Console.WriteLine($"Contains_small_ms={Measure(lines, hotMatcher, "yangmao", 0):F1}");
+		Console.WriteLine($"StartsWith_small_ms={Measure(lines, hotMatcher, "yangmao", 1):F1}");
+		Console.WriteLine($"IsMatch_small_ms={Measure(lines, hotMatcher, "yangmao", 2):F1}");
 
 		// 3. 多线程缓存命中：预编译 64 个查询，8 线程各 100k 次命中
 		{
@@ -56,24 +58,36 @@ public static class QuickBenchmark {
 		}
 	}
 
-	static private double Measure(string[] lines, Func<string, bool> match) {
+	static private double Measure(string[] lines, PinyinMatcher matcher, string query, int method) {
 		for (var i = 0; i < 3; i++) {
-			foreach (var line in lines) {
-				match(line);
-			}
+			Run(lines, matcher, query, method);
 		}
 
-		var best = double.MaxValue;
+		var samples = new double[5];
 		for (var r = 0; r < 5; r++) {
 			var sw = Stopwatch.StartNew();
-			foreach (var line in lines) {
-				match(line);
-			}
-
+			Run(lines, matcher, query, method);
 			sw.Stop();
-			best = Math.Min(best, sw.Elapsed.TotalMilliseconds);
+			samples[r] = sw.Elapsed.TotalMilliseconds;
 		}
 
-		return best;
+		Array.Sort(samples);
+		return samples[2];
+	}
+
+	static private void Run(string[] lines, PinyinMatcher matcher, string query, int method) {
+		foreach (var line in lines) {
+			switch (method) {
+				case 0:
+					matcher.Contains(line, query);
+					break;
+				case 1:
+					matcher.StartsWith(line, query);
+					break;
+				default:
+					matcher.IsMatch(line, query);
+					break;
+			}
+		}
 	}
 }
