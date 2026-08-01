@@ -10,12 +10,13 @@
         <Title>ZeroPinyin</Title>
         <Authors>神麤詭末</Authors>
         <Description>一个高性能、零内存分配的即时中文拼音匹配引擎</Description>
-        <Version>1.0.3</Version>
+        <Version>1.0.4</Version>
         <PackageProjectUrl>https://github.com/scgm0/ZeroPinyin</PackageProjectUrl>
         <RepositoryUrl>https://github.com/scgm0/ZeroPinyin.git</RepositoryUrl>
         <PackageTags>Pinyin;Chinese;Search;NFA;ZeroPinyin;Matcher</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
     <ItemGroup>
