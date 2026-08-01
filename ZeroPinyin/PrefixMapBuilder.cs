@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace ZeroPinyin;
 
+/// <summary>构建拼音前缀索引（内部基础设施）。</summary>
 public static class PrefixMapBuilder {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static private void GetFuzzyInitials(string? ini, bool enable, out string i0, out string? i1) {
@@ -186,6 +187,12 @@ public static class PrefixMapBuilder {
 		}
 	}
 
+	/// <summary>
+	/// 从映射表构建前缀索引。
+	/// </summary>
+	/// <param name="map">汉字拼音映射表。</param>
+	/// <param name="fuzzy">模糊配置（决定模糊音等价关系）。</param>
+	/// <returns>前缀索引数据。</returns>
 	public static PinyinPrefixData Build(HanziPinyinMap map, FuzzyConfig fuzzy) {
 		var exactIntCount = 0;
 		var exactEndCount = 0;

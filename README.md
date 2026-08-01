@@ -19,8 +19,10 @@ dotnet add package ZeroPinyin
   * **模糊音支持**：可选开启声母（zh/z, sh/s, n/l 等）和韵母（an/ang, in/ing 等）的模糊匹配。
   * **中英混拼**：支持中文、拼音、数字混搭搜索（如 `zhong国123` 匹配 `中国123`），且自带同音字容错。
   * **大小写不敏感**：忽略搜索串的大小写。
-  * **音调匹配**：支持附加数字音调精确搜索（如 `yang2mao2` 匹配 `羊毛`）。
-* ⚠️ **注意**：由于采用 `ulong` 寄存器作为底层状态机，单次搜索的字符串最大长度被硬性限制为 **63 个字符**，这对于大部分的即时匹配场景已经足够。
+  * **音调匹配**：支持附加数字音调精确搜索（如 `yang2mao2` 匹配 `羊毛`），搜索串也支持 Unicode 声调符号（如 `yángmáo`）。
+* **ü/v 兼容**：搜索串中的 `lü`、`lǜ` 与 `lv`、`lv4` 等价（内置拼音数据自动将 ü 归一为 v，如 `绿` 可用 `lv` 匹配）。
+* **匹配定位**：`FindFirstIndex` 返回首个匹配的起始位置，`AllMatches` 零分配枚举所有不重叠匹配区间（起始/长度），便于高亮与跳转。
+* ⚠️ **注意**：由于采用 `ulong` 寄存器作为底层状态机，单次搜索的字符串最大长度被硬性限制为 **63 个字符**（转换表按状态数线性扩张，超长查询会导致单查询数 MB 级内存占用，与 1024 项查询缓存架构冲突），这对于大部分的即时匹配场景已经足够；如需匹配超长文本，建议将搜索串分段后逐段匹配。
 
 ## 🛠 技术路线与底层优化
 
@@ -56,6 +58,17 @@ bool result5 = matcher.Contains("长江", "zhangjiang");      // True (多音字
 // 混合匹配与容错
 bool result6 = matcher.Contains("中国", "zhong国"); // True
 bool result7 = matcher.Contains("知识", "zisi");    // True (默认开启模糊音)
+
+// 声调符号与 ü 输入
+bool result8 = matcher.Contains("羊毛", "yángmáo"); // True (声调符号自动规范化)
+bool result9 = matcher.Contains("绿", "lü");        // True (ü 自动归一为 v)
+
+// 匹配定位（高亮/跳转）
+int index = matcher.FindFirstIndex("一只羊毛", "yangmao"); // 2
+var matches = matcher.AllMatches("羊毛羊毛", "yangmao");   // [0,2]、[2,2]
+while (matches.MoveNext()) {
+    var range = matches.Current; // Start / Length / End
+}
 ```
 
 ### 2. 自定义模糊音配置
