@@ -17,6 +17,7 @@ public class ZeroPinyinBenchmarks {
 		yield return new("large.txt");
 	}
 
+	[ParamsAllValues]
 	public string Query { get; set; } = "yangmao";
 
 	[GlobalSetup]
