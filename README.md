@@ -85,35 +85,37 @@ var customMatcher = new PinyinMatcher(customMap);
 
 ## 📊 性能基准测试
 
-以下测试运行于 **.NET 10.0 SDK** (X64 RyuJIT)，对比了在两组来自[PinIn](https://github.com/Towdium/PinIn)的数据集下执行拼音匹配的性能。
+以下测试运行于 **GitHub Actions CI**（.NET 10.0 SDK，X64 RyuJIT），对比了在两组来自[PinIn](https://github.com/Towdium/PinIn)的数据集下执行拼音匹配的性能。
 
 * **large.txt**：13.5 MiB，1,000,000 行文本
 * **small.txt**：866.0 KiB，37,450 行文本
 
 ```
-BenchmarkDotNet v0.15.8, Linux CachyOS
-Intel Core i5-9300H CPU 2.40GHz (Max: 0.80GHz), 1 CPU, 8 logical and 4 physical cores
-.NET SDK 10.0.300
-  [Host]     : .NET 10.0.8 (10.0.8, 10.0.826.23019), X64 RyuJIT x86-64-v3
-  Job-XPUURG : .NET 10.0.8 (10.0.8, 10.0.826.23019), X64 RyuJIT x86-64-v3
+BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.4 LTS (Noble Numbat)
+AMD EPYC 9V74 2.60GHz, 1 CPU, 4 logical and 2 physical cores
+.NET SDK 10.0.302
+  [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+  Job-XPUURG : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
 
 IterationCount=10  WarmupCount=5  
 ```
 
-| Method       | Query   | FileParam | Size      | Lines     | Mean        | Error     | StdDev   | Gen0     | Gen1     | Gen2     | Allocated |
-|------------- |-------- |---------- |----------:|----------:|------------:|----------:|---------:|---------:|---------:|---------:|----------:|
-| **Init**         | **yangmao** | **large.txt** |  **13.5 MiB** | **1,000,000** | **22,670.5 μs** |  **94.32 μs** | **56.13 μs** |  **62.5000** |        **-** |        **-** | **1665400 B** |
-| Contains     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 26,664.0 μs |  50.04 μs | 33.10 μs |        - |        - |        - |         - |
-| CountMatches | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,417.2 μs | 142.09 μs | 93.98 μs |        - |        - |        - |         - |
-| StartsWith   | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,655.7 μs |  62.53 μs | 41.36 μs |        - |        - |        - |         - |
-| EndsWith     | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,826.3 μs | 113.77 μs | 75.25 μs |        - |        - |        - |         - |
-| IsMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,948.3 μs |  54.16 μs | 35.82 μs |        - |        - |        - |         - |
-| **Init**         | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **22,609.5 μs** | **116.45 μs** | **69.30 μs** | **218.7500** | **156.2500** | **156.2500** | **1666921 B** |
-| Contains     | yangmao | small.txt | 866.0 KiB |    37,450 |  1,113.3 μs |   7.81 μs |  5.16 μs |        - |        - |        - |         - |
-| CountMatches | yangmao | small.txt | 866.0 KiB |    37,450 |  1,086.3 μs |   7.32 μs |  4.84 μs |        - |        - |        - |         - |
-| StartsWith   | yangmao | small.txt | 866.0 KiB |    37,450 |    290.3 μs |   1.00 μs |  0.66 μs |        - |        - |        - |         - |
-| EndsWith     | yangmao | small.txt | 866.0 KiB |    37,450 |    865.3 μs |   2.05 μs |  1.36 μs |        - |        - |        - |         - |
-| IsMatch      | yangmao | small.txt | 866.0 KiB |    37,450 |    282.0 μs |   1.53 μs |  1.01 μs |        - |        - |        - |         - |
+| Method              | Query   | FileParam | Size      | Lines     | Mean        | Error     | StdDev   | Gen0     | Gen1     | Gen2     | Allocated |
+|-------------------- |-------- |---------- |----------:|----------:|------------:|----------:|---------:|---------:|---------:|---------:|----------:|
+| **Init**            | **yangmao** | **large.txt** | **13.5 MiB** | **1,000,000** | **22,149.6 μs** | **51.09 μs** | **30.40 μs** |        **-** |        **-** |        **-** | **1666456 B** |
+| Contains            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,585.1 μs | 24.11 μs | 14.35 μs |        - |        - |        - |         - |
+| CountMatches        | yangmao | large.txt |  13.5 MiB | 1,000,000 | 26,017.7 μs | 56.31 μs | 33.51 μs |        - |        - |        - |         - |
+| StartsWith          | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,135.6 μs | 26.95 μs | 17.82 μs |        - |        - |        - |         - |
+| EndsWith            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,474.2 μs | 42.51 μs | 22.23 μs |        - |        - |        - |         - |
+| IsMatch             | yangmao | large.txt |  13.5 MiB | 1,000,000 |  8,952.8 μs | 17.79 μs |  9.30 μs |        - |        - |        - |         - |
+| **Init**            | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **22,770.5 μs** | **95.42 μs** | **56.79 μs** | **156.2500** | **156.2500** | **156.2500** | **1667977 B** |
+| Contains            | yangmao | small.txt | 866.0 KiB |    37,450 |  1,166.6 μs |  1.84 μs |  1.21 μs |        - |        - |        - |         - |
+| CountMatches        | yangmao | small.txt | 866.0 KiB |    37,450 |  1,166.0 μs |  2.57 μs |  1.70 μs |        - |        - |        - |         - |
+| StartsWith          | yangmao | small.txt | 866.0 KiB |    37,450 |    261.2 μs |  0.85 μs |  0.50 μs |        - |        - |        - |         - |
+| EndsWith            | yangmao | small.txt | 866.0 KiB |    37,450 |    618.4 μs |  4.98 μs |  3.29 μs |        - |        - |        - |         - |
+| IsMatch             | yangmao | small.txt | 866.0 KiB |    37,450 |    257.4 μs |  1.14 μs |  0.76 μs |        - |        - |        - |         - |
+| ColdCompile         | yangmao |        - |        - |        - |    277.0 μs | 30.84 μs | 20.40 μs | 12.6953 | 7.8125 | 0.9766 | 1104324 B |
+| MultiThreadCacheHit | yangmao |        - |        - |        - | 20,251.1 μs |105.66 μs | 69.89 μs |        - |        - |        - |      952 B |
 
 <details>
 <summary><b>点击查看数据字段说明</b></summary>
@@ -131,13 +133,19 @@ IterationCount=10  WarmupCount=5
   Gen2      : 每1000次操作中第2代垃圾回收次数
   Allocated : 单次操作分配的内存（仅托管内存，包含所有分配，1KB = 1024B）
   1 μs      : 1微秒（0.000001秒）
+  ColdCompile      : 缓存未命中时编译一个全新查询（模拟输入法每按键的新词条）
+  MultiThreadCacheHit : 8 线程并发各轮换 64 个已缓存查询，总 800,000 次命中
 ```
 </details>
 
 ### 测试结论说明：
-* **`Init`（初始化）**：启动阶段构建`HanziPinyinMap`与`PinyinMatcher`耗时极低（约 22ms），一次性分配约 1.58 MiB 内存，此后字典数据常驻内存供复用。
+* **`Init`（初始化）**：启动阶段构建`HanziPinyinMap`与`PinyinMatcher`耗时约 22ms，一次性分配约 1.58 MiB 内存，此后字典数据常驻内存供复用。
+* **`ColdCompile`（冷编译）**：缓存未命中时编译新查询仅需约 **0.28ms**，单字符前缀直接映射表（O(1) 查表替代二分查找）加速编译路径。
+* **`MultiThreadCacheHit`（多线程缓存命中）**：8 线程并发共享同一匹配器（总 800,000 次命中）约 **20ms**；相比旧版单锁方案提升约 **30%**（无锁缓存读取 + 线程局部快速路径消除锁竞争；本地笔记本实测提升可达 5-13 倍，取决于锁竞争程度）。
 * **搜索过程（Allocated = `-`）**：在搜索方法执行时，**堆内存分配为 0 Byte**，这意味着哪怕以极高频率并发搜索，也不会给垃圾回收器（GC）带来任何压力。
-* **高吞吐量**：在 100 万行（13.5 MiB）文本的 `Contains` 遍历搜索中，耗时仅需约 25 毫秒（即每秒可扫描处理近 4000 万行文本）。
+* **高吞吐量**：在 100 万行（13.5 MiB）文本的 `Contains` 遍历搜索中，耗时约 26 毫秒（即每秒可扫描处理近 3900 万行文本）。
+
+> 注：CI runner 为共享租户（AMD EPYC 9V74），不同运行的 CPU 频率存在差异（2.60-2.87GHz）；经频率归一化对比，新版（本表）相对旧版热循环持平或快 3-12%，多线程缓存命中快约 31%，无性能退化。
 
 ## 📦 依赖与兼容性
 
