@@ -60,7 +60,6 @@ jobs:
     name: 完整 BenchmarkDotNet
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -77,12 +76,11 @@ jobs:
           import csv, sys
           out = sys.argv[1]
           rows = []
-          for fn in ('ZeroPinyin.Benchmarks.ZeroPinyinBenchmarks-report.csv', 'ZeroPinyin.Benchmarks.ZeroPinyinCompileBenchmarks-report.csv'):
-              try:
-                  with open('BenchmarkDotNet.Artifacts/results/' + fn) as fh:
-                      rows += list(csv.DictReader(fh))
-              except FileNotFoundError:
-                  pass
+          try:
+              with open('BenchmarkDotNet.Artifacts/results/ZeroPinyin.Benchmarks.ZeroPinyinBenchmarks-report.csv') as fh:
+                  rows = list(csv.DictReader(fh))
+          except FileNotFoundError:
+              pass
           with open(out, 'a') as f:
               f.write('| Method | File | Mean | Allocated |\n')
               f.write('|---|---|---|---|\n')
