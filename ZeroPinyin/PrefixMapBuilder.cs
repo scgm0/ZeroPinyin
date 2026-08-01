@@ -256,6 +256,15 @@ public static class PrefixMapBuilder {
 		ArrayPool<ulong>.Shared.Return(endKeys);
 		ArrayPool<ushort>.Shared.Return(endIds);
 
-		return new(finalIntKeys, finalIntRanges, finalIntValues, finalEndKeys, finalEndRanges, finalEndValues);
+		var singleCharRanges = new short[256];
+		Array.Fill(singleCharRanges, (short)-1);
+		for (var i = 0; i < finalIntKeys.Length; i++) {
+			var k = finalIntKeys[i];
+			if (k < 256) {
+				singleCharRanges[k] = (short)i;
+			}
+		}
+
+		return new(finalIntKeys, finalIntRanges, finalIntValues, finalEndKeys, finalEndRanges, finalEndValues, singleCharRanges);
 	}
 }

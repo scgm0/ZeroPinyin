@@ -7,3 +7,4 @@ if (args.Length > 0 && args[0] == "--quick") {
 }
 
 BenchmarkRunner.Run<ZeroPinyinBenchmarks>();
+BenchmarkRunner.Run<ZeroPinyinCompileBenchmarks>();

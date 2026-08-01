@@ -39,7 +39,7 @@ public sealed class PinyinQuery {
 		ulong exactMatchMask = 0;
 		char[]? exactChars = null;
 
-		var (intKeys, intRanges, intValues) = (prefixData.IntKeys, prefixData.IntRanges, prefixData.IntValues);
+		var (intKeys, intRanges, intValues, singleCharRanges) = (prefixData.IntKeys, prefixData.IntRanges, prefixData.IntValues, prefixData.SingleCharRanges);
 		var (endKeys, endRanges, endValues) = (prefixData.EndKeys, prefixData.EndRanges, prefixData.EndValues);
 
 		for (var s = 0; s < searchLength; s++) {
@@ -77,7 +77,7 @@ public sealed class PinyinQuery {
 						var ranges = isEnd ? endRanges : intRanges;
 						var values = isEnd ? endValues : intValues;
 
-						var idx = Array.BinarySearch(keys, encoded);
+						var idx = len == 1 ? singleCharRanges[(byte)encoded] : Array.BinarySearch(keys, encoded);
 						if (idx >= 0) {
 							var range = ranges[idx];
 							var mask = 1UL << (s + len);
@@ -154,7 +154,7 @@ public sealed class PinyinQuery {
 
 	[SkipLocalsInit]
 	public bool Contains(ReadOnlySpan<char> text) {
-		if (text.IsEmpty) {
+		if (text.IsEmpty || _fastForwardChars is null) {
 			return false;
 		}
 
@@ -167,10 +167,6 @@ public sealed class PinyinQuery {
 
 		for (var i = 0; i < len; i++) {
 			if (current == 0) {
-				if (_fastForwardChars is null) {
-					return false;
-				}
-
 				var pos = text[i..].IndexOfAny(_fastForwardChars);
 				if (pos < 0) {
 					return false;
@@ -182,7 +178,6 @@ public sealed class PinyinQuery {
 			var charCls = Unsafe.Add(ref charToClassRef, Unsafe.Add(ref textRef, i));
 			ref var stateTransRef = ref Unsafe.Add(ref transRef, (nint)charCls << shift);
 			var next = stateTransRef;
-
 			var bits = current & ~acceptMask;
 			while (bits != 0) {
 				var s = BitOperations.TrailingZeroCount(bits);
@@ -215,7 +210,7 @@ public sealed class PinyinQuery {
 
 	[SkipLocalsInit]
 	public int CountMatches(ReadOnlySpan<char> text) {
-		if (text.IsEmpty) {
+		if (text.IsEmpty || _fastForwardChars is null) {
 			return 0;
 		}
 
@@ -229,10 +224,6 @@ public sealed class PinyinQuery {
 
 		for (var i = 0; i < len; i++) {
 			if (current == 0) {
-				if (_fastForwardChars is null) {
-					return matchCount;
-				}
-
 				var pos = text[i..].IndexOfAny(_fastForwardChars);
 				if (pos < 0) {
 					return matchCount;
@@ -277,7 +268,7 @@ public sealed class PinyinQuery {
 
 	[SkipLocalsInit]
 	public bool EndsWith(ReadOnlySpan<char> text) {
-		if (text.IsEmpty) {
+		if (text.IsEmpty || _fastForwardChars is null) {
 			return false;
 		}
 
@@ -293,10 +284,6 @@ public sealed class PinyinQuery {
 
 		for (var i = startIdx; i < len; i++) {
 			if (current == 0) {
-				if (_fastForwardChars is null) {
-					return false;
-				}
-
 				var pos = text[i..].IndexOfAny(_fastForwardChars);
 				if (pos < 0) {
 					return false;

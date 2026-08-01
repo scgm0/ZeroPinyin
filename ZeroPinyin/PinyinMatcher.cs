@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
 namespace ZeroPinyin;
@@ -7,15 +8,18 @@ public sealed class PinyinMatcher {
 	private readonly PinyinPrefixData _prefixData;
 	private readonly FuzzyConfig _config;
 
-	private string? _lastSearchString;
-	private PinyinQuery? _lastSearchQuery;
-
-	private readonly Dictionary<string, PinyinQuery> _cache = new(StringComparer.Ordinal);
-	private readonly Dictionary<string, PinyinQuery>.AlternateLookup<ReadOnlySpan<char>> _cacheLookup;
+	private readonly ConcurrentDictionary<string, PinyinQuery> _cache = new(StringComparer.Ordinal);
+	private readonly ConcurrentDictionary<string, PinyinQuery>.AlternateLookup<ReadOnlySpan<char>> _cacheLookup;
 
 	private readonly string?[] _fifoKeys = new string?[1024];
 	private int _fifoIndex;
 	private readonly Lock _lock = new();
+
+	private string? _lastSearchString;
+	private PinyinQuery? _lastSearchQuery;
+
+	[ThreadStatic]
+	private static (PinyinMatcher m, string s, PinyinQuery q) t_last;
 
 	public static PinyinMatcher Default { get; } = new(HanziPinyinMap.Default);
 
@@ -55,27 +59,41 @@ public sealed class PinyinMatcher {
 			return _lastSearchQuery;
 		}
 
-		lock (_lock) {
-			if (_cacheLookup.TryGetValue(search, out var q)) {
-				_lastSearchString = q.SearchText;
-				_lastSearchQuery = q;
-				return q;
-			}
+		var t = t_last;
+		if (t.m == this && t.s is not null && search.SequenceEqual(t.s)) {
+			return t.q;
+		}
 
-			q = new(search, _map, _prefixData, _config);
+		if (_cacheLookup.TryGetValue(search, out var q)) {
+			SetLast(q);
+			return q;
+		}
+
+		q = new(search, _map, _prefixData, _config);
+
+		lock (_lock) {
+			if (_cacheLookup.TryGetValue(search, out var existing)) {
+				return SetLast(existing);
+			}
 
 			var oldest = _fifoKeys[_fifoIndex];
 			if (oldest is not null) {
-				_cache.Remove(oldest);
+				_cache.TryRemove(oldest, out _);
 			}
 
-			_cacheLookup[search] = q;
+			_cache.TryAdd(q.SearchText, q);
 			_fifoKeys[_fifoIndex] = q.SearchText;
 			_fifoIndex = _fifoIndex + 1 & 1023;
-
-			_lastSearchString = q.SearchText;
-			_lastSearchQuery = q;
-			return q;
 		}
+
+		return SetLast(q);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private PinyinQuery SetLast(PinyinQuery q) {
+		_lastSearchString = q.SearchText;
+		_lastSearchQuery = q;
+		t_last = (this, q.SearchText, q);
+		return q;
 	}
 }
