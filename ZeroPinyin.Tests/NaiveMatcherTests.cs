@@ -1,14 +1,14 @@
 namespace ZeroPinyin.Tests;
 
 public class NaiveMatcherTests {
-	private static readonly string[] SyllablePool = [
+	static private readonly string[] SyllablePool = [
 		"yang", "mao", "zhong", "guo", "ren", "min", "zhi", "shi", "chang", "jiang",
 		"chong", "qing", "cheng", "zhang", "lv", "se", "nv", "yi", "lu", "xue",
 	];
 
 	private const string HanziPool = "羊毛出在羊身上中华人民共和国重庆知识中国绿色女一路长江成长";
 
-	private static string RandomText(Random rnd, int maxLen) {
+	static private string RandomText(Random rnd, int maxLen) {
 		var sb = new System.Text.StringBuilder();
 		var len = rnd.Next(1, maxLen + 1);
 		for (var i = 0; i < len; i++) {
@@ -18,7 +18,7 @@ public class NaiveMatcherTests {
 		return sb.ToString();
 	}
 
-	private static string RandomPinyinSearch(Random rnd) {
+	static private string RandomPinyinSearch(Random rnd) {
 		var sb = new System.Text.StringBuilder();
 		var sylCount = rnd.Next(1, 4);
 		for (var i = 0; i < sylCount; i++) {

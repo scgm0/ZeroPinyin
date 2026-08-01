@@ -376,7 +376,7 @@ public sealed class PinyinQuery {
 	/// </summary>
 	public ref struct MatchEnumerator {
 		private readonly PinyinQuery _q;
-		private ReadOnlySpan<char> _text;
+		private readonly ReadOnlySpan<char> _text;
 		private int _index;
 		private MatchRange _current;
 
@@ -468,7 +468,7 @@ public sealed class PinyinQuery {
 
 				if ((next & acceptMask) != 0) {
 					var mStart = startPos[q._searchLength];
-					_current = new MatchRange(mStart, i + 1 - mStart);
+					_current = new(mStart, i + 1 - mStart);
 					_index = i + 1;
 					return true;
 				}

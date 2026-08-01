@@ -23,7 +23,7 @@ public sealed class PinyinMatcher {
 	private PinyinQuery? _lastSearchQuery;
 
 	[ThreadStatic]
-	private static (PinyinMatcher m, string s, PinyinQuery q) t_last;
+	static private (PinyinMatcher m, string s, PinyinQuery q) _tLast;
 
 	/// <summary>使用默认拼音数据与默认模糊配置的单例匹配器。</summary>
 	public static PinyinMatcher Default { get; } = new(HanziPinyinMap.Default);
@@ -100,7 +100,7 @@ public sealed class PinyinMatcher {
 			return _lastSearchQuery;
 		}
 
-		var t = t_last;
+		var t = _tLast;
 		if (t.m == this && t.s is not null && search.SequenceEqual(t.s)) {
 			return t.q;
 		}
@@ -141,7 +141,7 @@ public sealed class PinyinMatcher {
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static bool NeedsNormalization(ReadOnlySpan<char> search) {
+	static private bool NeedsNormalization(ReadOnlySpan<char> search) {
 		foreach (var c in search) {
 			if (c is 'ü' or 'ǖ' or 'ǘ' or 'ǚ' or 'ǜ' or
 				'ā' or 'á' or 'ǎ' or 'à' or
@@ -160,7 +160,7 @@ public sealed class PinyinMatcher {
 	private PinyinQuery SetLast(PinyinQuery q) {
 		_lastSearchString = q.SearchText;
 		_lastSearchQuery = q;
-		t_last = (this, q.SearchText, q);
+		_tLast = (this, q.SearchText, q);
 		return q;
 	}
 }

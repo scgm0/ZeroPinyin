@@ -6,7 +6,7 @@ public class PropertyTests {
 	private const string HanziPool = "羊毛出在羊身上中华人民共和国重庆知识中国绿色女一路";
 	private const string PinyinPool = "yangmao zhongguo zhrmghg zisi chongqing yang zhong guo mao lv se nv yi lu";
 
-	private static string RandomText(Random rnd, int maxLen) {
+	static private string RandomText(Random rnd, int maxLen) {
 		var sb = new System.Text.StringBuilder();
 		var len = rnd.Next(1, maxLen + 1);
 		for (var i = 0; i < len; i++) {
@@ -16,7 +16,7 @@ public class PropertyTests {
 		return sb.ToString();
 	}
 
-	private static string RandomSearch(Random rnd) {
+	static private string RandomSearch(Random rnd) {
 		var parts = PinyinPool.Split(' ');
 		var sb = new System.Text.StringBuilder();
 		var len = rnd.Next(1, 4);
@@ -42,7 +42,7 @@ public class PropertyTests {
 			var text = RandomText(rnd, 20);
 			var search = RandomSearch(rnd);
 			Assert.True(
-				strict.Contains(text, search) == false || _matcher.Contains(text, search),
+				!strict.Contains(text, search) || _matcher.Contains(text, search),
 				$"模糊关闭匹配时模糊开启必须也匹配: text={text} search={search}");
 		}
 	}
@@ -60,7 +60,7 @@ public class PropertyTests {
 			var text = RandomText(rnd, 20);
 			var search = RandomSearch(rnd);
 			Assert.True(
-				exact.Contains(text, search) == false || loose.Contains(text, search),
+				!exact.Contains(text, search) || loose.Contains(text, search),
 				$"精确汉字匹配时匹配则宽松必须也匹配: text={text} search={search}");
 		}
 	}
@@ -86,10 +86,10 @@ public class PropertyTests {
 			var text = RandomText(rnd, 10);
 			var search = RandomSearch(rnd);
 			Assert.True(
-				_matcher.StartsWith(text, search) == false || _matcher.Contains(text, search),
+				!_matcher.StartsWith(text, search) || _matcher.Contains(text, search),
 				$"StartsWith 必须蕴含 Contains: text={text} search={search}");
 			Assert.True(
-				_matcher.EndsWith(text, search) == false || _matcher.Contains(text, search),
+				!_matcher.EndsWith(text, search) || _matcher.Contains(text, search),
 				$"EndsWith 必须蕴含 Contains: text={text} search={search}");
 		}
 	}

@@ -5,7 +5,7 @@ namespace ZeroPinyin.Tests;
 /// 仅支持无模糊配置（FuzzyConfig 全关 + ExactMatchForHanzi=true）下的：
 /// 纯汉字搜索串（精确子串）与纯拼音搜索串（音节前缀递归匹配）。
 /// </summary>
-internal static class NaiveMatcher {
+static class NaiveMatcher {
 	public static bool Contains(ReadOnlySpan<char> text, ReadOnlySpan<char> search) {
 		if (search.IsEmpty) {
 			return true;
@@ -32,7 +32,7 @@ internal static class NaiveMatcher {
 		throw new NotSupportedException("朴素验证器不支持混合搜索串");
 	}
 
-	private static bool IsAllHanzi(ReadOnlySpan<char> s) {
+	static private bool IsAllHanzi(ReadOnlySpan<char> s) {
 		foreach (var c in s) {
 			if (char.IsAscii(c)) {
 				return false;
@@ -42,7 +42,7 @@ internal static class NaiveMatcher {
 		return true;
 	}
 
-	private static bool IsAllPinyin(ReadOnlySpan<char> s) {
+	static private bool IsAllPinyin(ReadOnlySpan<char> s) {
 		foreach (var c in s) {
 			if (c is not (>= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '5')) {
 				return false;
@@ -52,7 +52,7 @@ internal static class NaiveMatcher {
 		return true;
 	}
 
-	private static bool MatchFrom(ReadOnlySpan<char> text, int i, ReadOnlySpan<char> search, int pos) {
+	static private bool MatchFrom(ReadOnlySpan<char> text, int i, ReadOnlySpan<char> search, int pos) {
 		if (pos == search.Length) {
 			return true;
 		}
@@ -71,7 +71,7 @@ internal static class NaiveMatcher {
 		return false;
 	}
 
-	private static bool CharMatchesPrefix(char c, ReadOnlySpan<char> prefix) {
+	static private bool CharMatchesPrefix(char c, ReadOnlySpan<char> prefix) {
 		var map = HanziPinyinMap.Default;
 		var cls = map.CharToClass[c];
 		if (cls == 0) {
