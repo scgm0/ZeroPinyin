@@ -131,6 +131,7 @@ IterationCount=10  WarmupCount=5
 | EndsWith            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 24,799.6 μs | 450.48 μs | 297.97 μs |        - |        - |        - |         - |
 | IsMatch             | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,635.2 μs |  33.10 μs |  19.69 μs |        - |        - |        - |         - |
 | FindFirstIndex      | yangmao | large.txt |  13.5 MiB | 1,000,000 | 31,503.4 μs |  44.22 μs |  26.31 μs |        - |        - |        - |         - |
+| FindFirstMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 | 32,386.5 μs |  54.43 μs |  32.39 μs |        - |        - |        - |         - |
 | AllMatches          | yangmao | large.txt |  13.5 MiB | 1,000,000 | 33,585.5 μs |  53.73 μs |  28.10 μs |        - |        - |        - |         - |
 | ColdCompile         | yangmao | large.txt |  13.5 MiB | 1,000,000 |    315.8 μs |  23.10 μs |  15.28 μs |  11.7188 |   6.8359 |        - | 1105472 B |
 | MultiThreadCacheHit | yangmao | large.txt |  13.5 MiB | 1,000,000 | 17,573.0 μs | 234.55 μs | 155.14 μs |        - |        - |        - |    3904 B |
@@ -139,8 +140,9 @@ IterationCount=10  WarmupCount=5
 | CountMatches        | yangmao | small.txt | 866.0 KiB |    37,450 |  1,243.8 μs |   4.10 μs |   2.44 μs |        - |        - |        - |         - |
 | StartsWith          | yangmao | small.txt | 866.0 KiB |    37,450 |    321.7 μs |   1.70 μs |   0.89 μs |        - |        - |        - |         - |
 | EndsWith            | yangmao | small.txt | 866.0 KiB |    37,450 |    748.8 μs |   1.69 μs |   0.89 μs |        - |        - |        - |         - |
-| IsMatch             | yangmao | small.txt | 866.0 KiB |    37,450 |    312.0 μs |   0.22 μs |   0.12 μs |        - |        - |        - |       6 B |
+| IsMatch             | yangmao | small.txt | 866.0 KiB |    37,450 |    383.5 μs |   0.58 μs |   0.35 μs |        - |        - |        - |         - |
 | FindFirstIndex      | yangmao | small.txt | 866.0 KiB |    37,450 |  1,522.9 μs |   1.02 μs |   0.67 μs |        - |        - |        - |         - |
+| FindFirstMatch      | yangmao | small.txt | 866.0 KiB |    37,450 |  1,407.3 μs |   1.77 μs |   1.06 μs |        - |        - |        - |         - |
 | AllMatches          | yangmao | small.txt | 866.0 KiB |    37,450 |  1,476.5 μs |   2.21 μs |   1.32 μs |        - |        - |        - |         - |
 | ColdCompile         | yangmao | small.txt | 866.0 KiB |    37,450 |    318.6 μs |  27.37 μs |  18.10 μs |  12.6953 |   7.8125 |   0.9766 | 1105481 B |
 | MultiThreadCacheHit | yangmao | small.txt | 866.0 KiB |    37,450 | 20,285.8 μs | 100.45 μs |  66.44 μs |        - |        - |        - |    3904 B |
@@ -170,7 +172,7 @@ IterationCount=10  WarmupCount=5
 * **`Init`（初始化）**：启动阶段构建`HanziPinyinMap`与`PinyinMatcher`耗时约 21ms，一次性分配约 1.59 MiB 内存，此后字典数据常驻内存供复用。
 * **`ColdCompile`（冷编译）**：缓存未命中时编译新查询仅需约 **0.32ms**，单字符前缀直接映射表（O(1) 查表替代二分查找）加速编译路径。
 * **`MultiThreadCacheHit`（多线程缓存命中）**：8 线程并发共享同一匹配器（总 800,000 次命中）约 **17-20ms**（原生线程测量；两参数行差异受共享租户负载影响，历史观测 2%-15%）；相比旧版单锁方案提升约 **30%**（无锁缓存读取 + 线程局部快速路径消除锁竞争，取决于锁竞争程度）。
-* **`FindFirstIndex`/`AllMatches`（匹配定位）**：返回首个匹配位置/枚举全部不重叠匹配区间（起始/长度），large 文本上约 31-34ms（约 `Contains` 的 1.3 倍——起点追踪的代价），全程零内存分配。
+* **`FindFirstIndex`/`FindFirstMatch`/`AllMatches`（匹配定位）**：返回首个匹配位置/首个匹配完整区间/枚举全部不重叠匹配区间，large 文本上约 31-34ms（约 `Contains` 的 1.3 倍——起点追踪的代价），全程零内存分配；区间基于 `System.Range`，可直接 `text[range]` 零分配切片。
 * **搜索过程（Allocated = `-`）**：在搜索方法执行时，**堆内存分配为 0 Byte**，这意味着哪怕以极高频率并发搜索，也不会给垃圾回收器（GC）带来任何压力。
 * **高吞吐量**：在 100 万行（13.5 MiB）文本的 `Contains` 遍历搜索中，耗时约 25 毫秒（即每秒可扫描处理近 4000 万行文本）。
 
