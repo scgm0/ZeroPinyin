@@ -73,9 +73,10 @@ if (matcher.FindFirstMatch("一只羊毛", "yangmao") is Range first) {
 // AllMatches 支持 foreach 枚举所有不重叠匹配
 string text = "羊毛羊毛";
 foreach (var range in matcher.AllMatches(text, "yangmao")) {
-    var (start, length) = range.GetOffsetAndLength(text.Length); // 起点与长度
-    Console.WriteLine($"匹配区间: {start}..{start + length}");
+    // range.Start / range.End 是 Index 类型，取 .Value 得到 int
+    Console.WriteLine($"匹配区间: {range.Start.Value}..{range.End.Value}");
     // 输出两行：匹配区间: 0..2 与 匹配区间: 2..4（含起点、不含终点，同 System.Range 语义）
+    // 需要起点与长度时：var (start, length) = range.GetOffsetAndLength(text.Length);
 }
 ```
 
