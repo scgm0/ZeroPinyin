@@ -365,7 +365,92 @@ public sealed class PinyinQuery {
 	}
 
 	/// <summary>
-	/// 枚举文本中所有不重叠匹配的区间（与 <see cref="CountMatches"/> 计数语义一致）。
+	/// 返回文本中第一个匹配的完整区间（Start..End，End 不含），无匹配时返回 default（0..0）。
+	/// 可用 <c>text[result]</c> 零分配获取匹配切片。
+	/// </summary>
+	/// <param name="text">待搜索文本。</param>
+	/// <returns>匹配区间，或 default。</returns>
+	[SkipLocalsInit]
+	public Range FindFirstMatch(ReadOnlySpan<char> text) {
+		if (text.IsEmpty || _fastForwardChars is null) {
+			return default;
+		}
+
+		ulong current = 0, acceptMask = _acceptMask;
+		int shift = _shift, len = text.Length;
+
+		ref var textRef = ref MemoryMarshal.GetReference(text);
+		ref var charToClassRef = ref MemoryMarshal.GetArrayDataReference(_map.CharToClass);
+		ref var transRef = ref MemoryMarshal.GetArrayDataReference(_flatTransitions);
+
+		Span<int> startPos = stackalloc int[64];
+		startPos.Fill(-1);
+
+		for (var i = 0; i < len; i++) {
+			if (current == 0) {
+				var pos = text[i..].IndexOfAny(_fastForwardChars);
+				if (pos < 0) {
+					return default;
+				}
+
+				i += pos;
+			}
+
+			var charCls = Unsafe.Add(ref charToClassRef, Unsafe.Add(ref textRef, i));
+			ref var stateTransRef = ref Unsafe.Add(ref transRef, (nint)charCls << shift);
+			var next = stateTransRef;
+
+			var initBits = next;
+			while (initBits != 0) {
+				var t = BitOperations.TrailingZeroCount(initBits);
+				initBits &= initBits - 1;
+				if (startPos[t] == -1 || i < startPos[t]) {
+					startPos[t] = i;
+				}
+			}
+
+			var bits = current & ~acceptMask;
+			while (bits != 0) {
+				var s = BitOperations.TrailingZeroCount(bits);
+				bits &= bits - 1;
+				var rowBits = Unsafe.Add(ref stateTransRef, s);
+				var newBits = rowBits & ~next;
+				while (newBits != 0) {
+					var t = BitOperations.TrailingZeroCount(newBits);
+					newBits &= newBits - 1;
+					if (startPos[t] == -1 || startPos[s] < startPos[t]) {
+						startPos[t] = startPos[s];
+					}
+				}
+
+				next |= rowBits;
+			}
+
+			if ((next & _exactMatchMask) != 0) {
+				var exactCheck = next & _exactMatchMask;
+				var textChar = Unsafe.Add(ref textRef, i);
+				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
+				while (exactCheck != 0) {
+					var s = BitOperations.TrailingZeroCount(exactCheck);
+					exactCheck &= exactCheck - 1;
+					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
+						next &= ~(1UL << s);
+					}
+				}
+			}
+
+			if ((next & acceptMask) != 0) {
+				return new Range(startPos[_searchLength], i + 1);
+			}
+
+			current = next;
+		}
+
+		return default;
+	}
+
+	/// <summary>
+	/// 枚举文本中所有不重叠匹配的区间（与 <see cref="CountMatches"/> 计数语义一致），零分配。
 	/// </summary>
 	/// <param name="text">待搜索文本。</param>
 	/// <returns>匹配区间枚举器。</returns>
@@ -378,7 +463,7 @@ public sealed class PinyinQuery {
 		private readonly PinyinQuery _q;
 		private readonly ReadOnlySpan<char> _text;
 		private int _index;
-		private MatchRange _current;
+		private Range _current;
 
 		internal MatchEnumerator(PinyinQuery q, ReadOnlySpan<char> text) {
 			_q = q;
@@ -387,8 +472,8 @@ public sealed class PinyinQuery {
 			_current = default;
 		}
 
-		/// <summary>当前匹配区间。</summary>
-		public readonly MatchRange Current => _current;
+		/// <summary>当前匹配区间（Start..End，End 不含；可用 text[Current] 零分配切片）。</summary>
+		public readonly Range Current => _current;
 
 		/// <summary>
 		/// 前进到下一个匹配区间。
@@ -468,7 +553,7 @@ public sealed class PinyinQuery {
 
 				if ((next & acceptMask) != 0) {
 					var mStart = startPos[q._searchLength];
-					_current = new(mStart, i + 1 - mStart);
+					_current = new Range(mStart, i + 1);
 					_index = i + 1;
 					return true;
 				}

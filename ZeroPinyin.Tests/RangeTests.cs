@@ -1,6 +1,6 @@
 namespace ZeroPinyin.Tests;
 
-public class MatchRangeTests {
+public class RangeTests {
 	private readonly PinyinMatcher _matcher = PinyinMatcher.Default;
 
 	[Theory]
@@ -17,12 +17,15 @@ public class MatchRangeTests {
 	public void AllMatches_ShouldEnumerateNonOverlappingRanges() {
 		var matches = _matcher.AllMatches("羊毛羊毛羊毛", "yangmao");
 		Assert.True(matches.MoveNext());
-		Assert.Equal(0, matches.Current.Start);
-		Assert.Equal(2, matches.Current.Length);
+		var (s0, l0) = matches.Current.GetOffsetAndLength(6);
+		Assert.Equal(0, s0);
+		Assert.Equal(2, l0);
 		Assert.True(matches.MoveNext());
-		Assert.Equal(2, matches.Current.Start);
+		var (s1, _) = matches.Current.GetOffsetAndLength(6);
+		Assert.Equal(2, s1);
 		Assert.True(matches.MoveNext());
-		Assert.Equal(4, matches.Current.Start);
+		var (s2, _) = matches.Current.GetOffsetAndLength(6);
+		Assert.Equal(4, s2);
 		Assert.False(matches.MoveNext());
 	}
 
@@ -30,9 +33,9 @@ public class MatchRangeTests {
 	public void AllMatches_ShouldSkipGaps() {
 		var matches = _matcher.AllMatches("一只羊毛和羊毛", "yangmao");
 		Assert.True(matches.MoveNext());
-		Assert.Equal(2, matches.Current.Start);
+		Assert.Equal(2, matches.Current.Start.Value);
 		Assert.True(matches.MoveNext());
-		Assert.Equal(5, matches.Current.Start);
+		Assert.Equal(5, matches.Current.Start.Value);
 		Assert.False(matches.MoveNext());
 	}
 
@@ -55,10 +58,10 @@ public class MatchRangeTests {
 	public void AllMatches_ShouldProduceValidRanges(string text, string search) {
 		var matches = _matcher.AllMatches(text, search);
 		while (matches.MoveNext()) {
-			var r = matches.Current;
-			Assert.True(r.Start >= 0);
-			Assert.True(r.Length >= 1);
-			Assert.True(r.End <= text.Length);
+			var (off, len) = matches.Current.GetOffsetAndLength(text.Length);
+			Assert.True(off >= 0);
+			Assert.True(len >= 1);
+			Assert.True(off + len <= text.Length);
 		}
 	}
 

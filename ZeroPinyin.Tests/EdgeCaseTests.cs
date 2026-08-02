@@ -67,10 +67,11 @@ public class EdgeCaseTests {
 	public void AllMatches_ShouldHandleOverlappingCandidates() {
 		var matches = _matcher.AllMatches("aaaa", "aa");
 		Assert.True(matches.MoveNext());
-		Assert.Equal(0, matches.Current.Start);
-		Assert.Equal(2, matches.Current.Length);
+		var (s0, l0) = matches.Current.GetOffsetAndLength(4);
+		Assert.Equal(0, s0);
+		Assert.Equal(2, l0);
 		Assert.True(matches.MoveNext());
-		Assert.Equal(2, matches.Current.Start);
+		Assert.Equal(2, matches.Current.Start.Value);
 		Assert.False(matches.MoveNext());
 	}
 
@@ -78,24 +79,26 @@ public class EdgeCaseTests {
 	public void AllMatches_ShouldWorkWithPolyphoneAndFuzzy() {
 		var matches = _matcher.AllMatches("长江长江", "changjiang");
 		Assert.True(matches.MoveNext());
-		Assert.Equal(0, matches.Current.Start);
-		Assert.Equal(2, matches.Current.Length);
+		var (s0, l0) = matches.Current.GetOffsetAndLength(4);
+		Assert.Equal(0, s0);
+		Assert.Equal(2, l0);
 		Assert.True(matches.MoveNext());
-		Assert.Equal(2, matches.Current.Start);
+		Assert.Equal(2, matches.Current.Start.Value);
 		Assert.False(matches.MoveNext());
 
 		var fuzzyMatches = _matcher.AllMatches("知识", "zisi");
 		Assert.True(fuzzyMatches.MoveNext());
-		Assert.Equal(0, fuzzyMatches.Current.Start);
-		Assert.Equal(2, fuzzyMatches.Current.Length);
+		Assert.Equal(0, fuzzyMatches.Current.Start.Value);
+		Assert.Equal(2, fuzzyMatches.Current.GetOffsetAndLength(2).Length);
 	}
 
 	[Fact]
 	public void AllMatches_ShouldReportPrefixMatchRange() {
 		var matches = _matcher.AllMatches("羊毛", "yang");
 		Assert.True(matches.MoveNext());
-		Assert.Equal(0, matches.Current.Start);
-		Assert.Equal(1, matches.Current.Length);
+		var (s0, l0) = matches.Current.GetOffsetAndLength(2);
+		Assert.Equal(0, s0);
+		Assert.Equal(1, l0);
 	}
 
 	[Fact]

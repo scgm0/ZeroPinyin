@@ -84,7 +84,18 @@ public sealed class PinyinMatcher {
 		search.IsEmpty ? 0 : text.IsEmpty ? -1 : GetOrCompileSpan(search).FindFirstIndex(text);
 
 	/// <summary>
-	/// 枚举文本中所有不重叠匹配的区间。
+	/// 返回文本中第一个匹配的完整区间（Start..End，End 不含），无匹配时返回 default（0..0）。
+	/// 可用 <c>text[result]</c> 零分配获取匹配切片；空搜索串返回 0..0。
+	/// </summary>
+	/// <param name="text">待搜索文本。</param>
+	/// <param name="search">拼音搜索串。</param>
+	/// <returns>匹配区间，或 default。</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Range FindFirstMatch(ReadOnlySpan<char> text, ReadOnlySpan<char> search) =>
+		search.IsEmpty ? new Range(0, 0) : text.IsEmpty ? default : GetOrCompileSpan(search).FindFirstMatch(text);
+
+	/// <summary>
+	/// 枚举文本中所有不重叠匹配的区间，零分配；Current 为 System.Range（可用 text[Current] 切片）。
 	/// </summary>
 	/// <param name="text">待搜索文本。</param>
 	/// <param name="search">拼音搜索串。</param>
