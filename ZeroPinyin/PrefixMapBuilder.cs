@@ -5,6 +5,8 @@ namespace ZeroPinyin;
 
 /// <summary>构建拼音前缀索引（内部基础设施）。</summary>
 public static class PrefixMapBuilder {
+	private static readonly ArrayPool<ulong> UlongPool = ArrayPool<ulong>.Create(1 << 20, 16);
+	private static readonly ArrayPool<ushort> UshortPool = ArrayPool<ushort>.Create(1 << 20, 16);
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static private void GetFuzzyInitials(string? ini, bool enable, out string i0, out string? i1) {
 		i0 = ini ?? "";
@@ -132,31 +134,31 @@ public static class PrefixMapBuilder {
 			return;
 		}
 
-		var tmpKeys = ArrayPool<ulong>.Shared.Rent(count);
-		var tmpIds = ArrayPool<ushort>.Shared.Rent(count);
-		var counts = ArrayPool<int>.Shared.Rent(65536);
+		var tmpKeys = UlongPool.Rent(count);
+		var tmpIds = UshortPool.Rent(count);
+		Span<int> counts = stackalloc int[256];
 
 		var fromKeys = keys;
 		var fromIds = ids;
 		var toKeys = tmpKeys;
 		var toIds = tmpIds;
 
-		for (var pass = 0; pass < 4; pass++) {
-			var shift = pass * 16;
-			Array.Clear(counts, 0, 65536);
+		for (var pass = 0; pass < 8; pass++) {
+			var shift = pass * 8;
+			counts.Clear();
 			for (var i = 0; i < count; i++) {
-				counts[(int)((fromKeys[i] >> shift) & 0xFFFF)]++;
+				counts[(int)((fromKeys[i] >> shift) & 0xFF)]++;
 			}
 
 			var sum = 0;
-			for (var i = 0; i < 65536; i++) {
+			for (var i = 0; i < 256; i++) {
 				var c = counts[i];
 				counts[i] = sum;
 				sum += c;
 			}
 
 			for (var i = 0; i < count; i++) {
-				var bucket = (int)((fromKeys[i] >> shift) & 0xFFFF);
+				var bucket = (int)((fromKeys[i] >> shift) & 0xFF);
 				var pos = counts[bucket]++;
 				toKeys[pos] = fromKeys[i];
 				toIds[pos] = fromIds[i];
@@ -171,9 +173,8 @@ public static class PrefixMapBuilder {
 			Array.Copy(fromIds, ids, count);
 		}
 
-		ArrayPool<ulong>.Shared.Return(tmpKeys);
-		ArrayPool<ushort>.Shared.Return(tmpIds);
-		ArrayPool<int>.Shared.Return(counts);
+		UlongPool.Return(tmpKeys);
+		UshortPool.Return(tmpIds);
 	}
 
 	static private void Compress(
