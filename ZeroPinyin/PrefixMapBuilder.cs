@@ -127,6 +127,55 @@ public static class PrefixMapBuilder {
 		ulong GetPrefix(int l) => encoded & (l >= 8 ? ulong.MaxValue : (1UL << l * 8) - 1);
 	}
 
+	static private void RadixSort(ulong[] keys, ushort[] ids, int count) {
+		if (count <= 1) {
+			return;
+		}
+
+		var tmpKeys = ArrayPool<ulong>.Shared.Rent(count);
+		var tmpIds = ArrayPool<ushort>.Shared.Rent(count);
+		var counts = ArrayPool<int>.Shared.Rent(65536);
+
+		var fromKeys = keys;
+		var fromIds = ids;
+		var toKeys = tmpKeys;
+		var toIds = tmpIds;
+
+		for (var pass = 0; pass < 4; pass++) {
+			var shift = pass * 16;
+			Array.Clear(counts, 0, 65536);
+			for (var i = 0; i < count; i++) {
+				counts[(int)((fromKeys[i] >> shift) & 0xFFFF)]++;
+			}
+
+			var sum = 0;
+			for (var i = 0; i < 65536; i++) {
+				var c = counts[i];
+				counts[i] = sum;
+				sum += c;
+			}
+
+			for (var i = 0; i < count; i++) {
+				var bucket = (int)((fromKeys[i] >> shift) & 0xFFFF);
+				var pos = counts[bucket]++;
+				toKeys[pos] = fromKeys[i];
+				toIds[pos] = fromIds[i];
+			}
+
+			(fromKeys, toKeys) = (toKeys, fromKeys);
+			(fromIds, toIds) = (toIds, fromIds);
+		}
+
+		if (fromKeys != keys) {
+			Array.Copy(fromKeys, keys, count);
+			Array.Copy(fromIds, ids, count);
+		}
+
+		ArrayPool<ulong>.Shared.Return(tmpKeys);
+		ArrayPool<ushort>.Shared.Return(tmpIds);
+		ArrayPool<int>.Shared.Return(counts);
+	}
+
 	static private void Compress(
 		ulong[] keys,
 		ushort[] ids,
@@ -141,7 +190,7 @@ public static class PrefixMapBuilder {
 			return;
 		}
 
-		Array.Sort(keys, ids, 0, count);
+		RadixSort(keys, ids, count);
 
 		var unique = 0;
 		for (var i = 0; i < count; i++) {

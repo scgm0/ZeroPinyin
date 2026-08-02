@@ -58,10 +58,16 @@ public sealed class HanziPinyinMap {
 		}
 
 		public override int GetHashCode() {
-			var hash = new HashCode();
-			hash.Add(Count);
-			for (var i = 0; i < Count; i++) hash.Add(Syllables[i]);
-			return hash.ToHashCode();
+			uint hash = 0x811C9DC5;
+			hash = (hash ^ (uint)Count) * 0x01000193;
+			for (var i = 0; i < Count; i++) {
+				var s = Syllables[i];
+				hash = (hash ^ s.InitialIdx) * 0x01000193;
+				hash = (hash ^ s.FinalIdx) * 0x01000193;
+				hash = (hash ^ s.Tone) * 0x01000193;
+			}
+
+			return (int)hash;
 		}
 	}
 
