@@ -48,31 +48,34 @@ using ZeroPinyin;
 var matcher = PinyinMatcher.Default;
 
 // 基础匹配
-bool result1 = matcher.Contains("羊毛", "yangmao"); // True
-bool result2 = matcher.StartsWith("羊毛", "yang");     // True
-bool result3 = matcher.EndsWith("薅羊毛", "mao");        // True
+bool result1 = matcher.Contains("羊毛", "yangmao");   // True
+bool result2 = matcher.StartsWith("羊毛", "yang");    // True
+bool result3 = matcher.EndsWith("薅羊毛", "mao");     // True
 
-// 首字母与多音字
-bool result4 = matcher.Contains("中华人民共和国", "zhrmghg"); // True
-bool result5 = matcher.Contains("长江", "zhangjiang");      // True (多音字:长)
+// 首字母缩写与多音字
+bool result4 = matcher.Contains("中华人民共和国", "zhrmghg"); // True（首字母缩写）
+bool result5 = matcher.Contains("长江", "zhangjiang");       // True（“长”是多音字）
 
-// 混合匹配与容错
-bool result6 = matcher.Contains("中国", "zhong国"); // True
-bool result7 = matcher.Contains("知识", "zisi");    // True (默认开启模糊音)
+// 中英混拼与模糊音
+bool result6 = matcher.Contains("中国", "zhong国");  // True（中英混拼）
+bool result7 = matcher.Contains("知识", "zisi");     // True（默认开启模糊音）
 
 // 声调符号与 ü 输入
-bool result8 = matcher.Contains("羊毛", "yángmáo"); // True (声调符号自动规范化)
-bool result9 = matcher.Contains("绿", "lü");        // True (ü 自动归一为 v)
+bool result8 = matcher.Contains("羊毛", "yángmáo"); // True（声调符号自动规范化）
+bool result9 = matcher.Contains("绿", "lü");        // True（ü 自动归一为 v）
 
-// 匹配定位（高亮/跳转，返回 System.Range 可零分配切片）
-int index = matcher.FindFirstIndex("一只羊毛", "yangmao"); // 2
+// 匹配定位：返回 System.Range，可直接零分配切片
+int index = matcher.FindFirstIndex("一只羊毛", "yangmao"); // 2（首个匹配的起始位置）
 if (matcher.FindFirstMatch("一只羊毛", "yangmao") is Range first) {
-    var slice = "一只羊毛".AsSpan()[first];                   // "羊毛"（零分配）
+    var slice = "一只羊毛".AsSpan()[first]; // "羊毛"，零分配切片（无需 Substring）
 }
-var matches = matcher.AllMatches("羊毛羊毛", "yangmao");      // 0..2、2..4
-while (matches.MoveNext()) {
-    var range = matches.Current;        // System.Range（Start..End，End 不含）
-    var (start, length) = range.GetOffsetAndLength(text.Length);
+
+// AllMatches 支持 foreach 枚举所有不重叠匹配
+string text = "羊毛羊毛";
+foreach (var range in matcher.AllMatches(text, "yangmao")) {
+    var (start, length) = range.GetOffsetAndLength(text.Length); // 起点与长度
+    Console.WriteLine($"匹配区间: {start}..{start + length}");
+    // 输出两行：匹配区间: 0..2 与 匹配区间: 2..4（含起点、不含终点，同 System.Range 语义）
 }
 ```
 
@@ -96,7 +99,7 @@ strictMatcher.Contains("知识", "zisi");   // False
 如果内置拼音数据不满足需求（如需要添加特殊生僻字或自定义发音），可以轻松注入自己的文本：
 
 ```csharp
-var myData = "U+4E2D: zhong1,zhong4\nU+56FD: guo2"; // 也可使用原始的拼音数据，比如"U+4E2D: zhōng,zhòng"
+var myData = "U+4E2D: zhong1,zhong4\nU+56FD: guo2"; // 也可使用带声调符号的原始数据，如 "U+4E2D: zhōng,zhòng"
 var customMap = new HanziPinyinMap(myData);
 var customMatcher = new PinyinMatcher(customMap);
 ```
