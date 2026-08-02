@@ -129,7 +129,8 @@ public sealed class PinyinQuery {
 		_exactMatchMask = exactMatchMask;
 		_exactChars = exactChars;
 
-		var startCharsSet = new HashSet<char>();
+		Span<ulong> charBitmap = stackalloc ulong[1024];
+		var charCount = 0;
 		for (var i = 0; i < 65536; i++) {
 			var cls = map.CharToClass[i];
 			if (cls != 0) {
@@ -150,16 +151,22 @@ public sealed class PinyinQuery {
 					}
 
 					if (nextFrom0 != 0) {
-						startCharsSet.Add((char)i);
+						charBitmap[i >> 6] |= 1UL << (i & 63);
+						charCount++;
 					}
 				}
 			}
 		}
 
-		if (startCharsSet.Count > 0) {
-			Span<char> scSpan = stackalloc char[startCharsSet.Count];
+		if (charCount > 0) {
+			Span<char> scSpan = stackalloc char[charCount];
 			var idx = 0;
-			foreach (var c in startCharsSet) scSpan[idx++] = c;
+			for (var i = 0; i < 65536; i++) {
+				if ((charBitmap[i >> 6] & (1UL << (i & 63))) != 0) {
+					scSpan[idx++] = (char)i;
+				}
+			}
+
 			_fastForwardChars = SearchValues.Create(scSpan);
 		}
 	}
@@ -320,7 +327,7 @@ public sealed class PinyinQuery {
 			while (initBits != 0) {
 				var t = BitOperations.TrailingZeroCount(initBits);
 				initBits &= initBits - 1;
-				if (startPos[t] == -1 || i < startPos[t]) {
+				if (current == 0 || startPos[t] == -1 || i < startPos[t]) {
 					startPos[t] = i;
 				}
 			}
@@ -405,7 +412,7 @@ public sealed class PinyinQuery {
 			while (initBits != 0) {
 				var t = BitOperations.TrailingZeroCount(initBits);
 				initBits &= initBits - 1;
-				if (startPos[t] == -1 || i < startPos[t]) {
+				if (current == 0 || startPos[t] == -1 || i < startPos[t]) {
 					startPos[t] = i;
 				}
 			}
@@ -522,7 +529,7 @@ public sealed class PinyinQuery {
 				while (initBits != 0) {
 					var t = BitOperations.TrailingZeroCount(initBits);
 					initBits &= initBits - 1;
-					if (startPos[t] == -1 || i < startPos[t]) {
+					if (current == 0 || startPos[t] == -1 || i < startPos[t]) {
 						startPos[t] = i;
 					}
 				}
