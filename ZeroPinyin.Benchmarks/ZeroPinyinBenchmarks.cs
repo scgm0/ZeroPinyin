@@ -118,6 +118,20 @@ public class ZeroPinyinBenchmarks {
 	}
 
 	[Benchmark]
+	public int FindFirstMatch() {
+		var count = 0;
+		var lines = _lines;
+		var query = Query;
+		var matcher = _matcher;
+
+		foreach (var line in lines) {
+			if (matcher.FindFirstMatch(line, query) is not null) count++;
+		}
+
+		return count;
+	}
+
+	[Benchmark]
 	public int AllMatches() {
 		var count = 0;
 		var lines = _lines;

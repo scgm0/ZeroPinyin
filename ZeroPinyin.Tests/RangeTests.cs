@@ -78,6 +78,54 @@ public class RangeTests {
 	}
 
 	[Fact]
+	public void FindFirstMatch_ShouldReturnNull_WhenNoMatch() {
+		Assert.Null(_matcher.FindFirstMatch("测试文本", "yangmao"));
+		Assert.Null(_matcher.FindFirstMatch("", "yangmao"));
+	}
+
+	[Fact]
+	public void FindFirstMatch_ShouldReturnRange_WhenMatched() {
+		var r = _matcher.FindFirstMatch("一只羊毛", "yangmao");
+		Assert.NotNull(r);
+		var (start, length) = r!.Value.GetOffsetAndLength(4);
+		Assert.Equal(2, start);
+		Assert.Equal(2, length);
+	}
+
+	[Fact]
+	public void FindFirstMatch_EmptySearch_ShouldReturnZeroRange() {
+		var r = _matcher.FindFirstMatch("羊毛", "");
+		Assert.NotNull(r);
+		Assert.Equal(0, r!.Value.Start.Value);
+		Assert.Equal(0, r.Value.End.Value);
+	}
+
+	[Fact]
+	public void FindFirstMatch_ShouldAlignWithContains() {
+		var rnd = new Random(5678);
+		foreach (var (text, search) in new[] {
+			("羊毛出在羊身上", "yangmao"),
+			("测试文本", "yangmao"),
+			("中华人民共和国", "zhrmghg"),
+			("长江", "zhangjiang"),
+			("知识", "zisi"),
+		}) {
+			Assert.Equal(_matcher.Contains(text, search), _matcher.FindFirstMatch(text, search) is not null);
+		}
+	}
+
+	[Fact]
+	public void AllMatches_ShouldSupportForeach() {
+		var count = 0;
+		foreach (var r in _matcher.AllMatches("羊毛羊毛", "yangmao")) {
+			count++;
+			Assert.True(r.End.Value - r.Start.Value >= 1);
+		}
+
+		Assert.Equal(2, count);
+	}
+
+	[Fact]
 	public void Query_AllMatches_ShouldWorkDirectly() {
 		var query = _matcher.Compile("mao");
 		var matches = query.AllMatches("羊毛和猫毛");

@@ -22,7 +22,7 @@ dotnet add package ZeroPinyin
   * **中英混拼**：支持中文、拼音、数字混搭搜索（如 `zhong国123` 匹配 `中国123`），且自带同音字容错。
   * **大小写不敏感**：忽略搜索串的大小写。
   * **音调匹配**：支持附加数字音调精确搜索（如 `yang2mao2` 匹配 `羊毛`），搜索串也支持 Unicode 声调符号（如 `yángmáo`）。
-* **匹配定位**：`FindFirstIndex` 返回首个匹配的起始位置，`FindFirstMatch` 返回首个匹配的完整区间，`AllMatches` 零分配枚举所有不重叠匹配区间——均返回 `System.Range`（`FindFirstIndex` 除外），可直接 `text[range]` 零分配切片，便于高亮与跳转。
+* **匹配定位**：`FindFirstIndex` 返回首个匹配的起始位置，`FindFirstMatch` 返回首个匹配的完整区间（无匹配返回 null），`AllMatches` 零分配枚举所有不重叠匹配区间（支持 `foreach`）——均基于 `System.Range`（`FindFirstIndex` 除外），可直接 `text[range]` 零分配切片，便于高亮与跳转。
 * ⚠️ **注意**：由于采用 `ulong` 寄存器作为底层状态机，单次搜索的字符串最大长度被硬性限制为 **63 个字符**，这对于大部分的即时匹配场景已经足够；如需匹配超长文本，建议将搜索串分段后逐段匹配。
 
 ## 🛠 技术路线与底层优化
@@ -66,8 +66,9 @@ bool result9 = matcher.Contains("绿", "lü");        // True (ü 自动归一�
 
 // 匹配定位（高亮/跳转，返回 System.Range 可零分配切片）
 int index = matcher.FindFirstIndex("一只羊毛", "yangmao"); // 2
-Range first = matcher.FindFirstMatch("一只羊毛", "yangmao"); // 2..4
-var slice = "一只羊毛".AsSpan()[first];                       // "羊毛"（零分配）
+if (matcher.FindFirstMatch("一只羊毛", "yangmao") is Range first) {
+    var slice = "一只羊毛".AsSpan()[first];                   // "羊毛"（零分配）
+}
 var matches = matcher.AllMatches("羊毛羊毛", "yangmao");      // 0..2、2..4
 while (matches.MoveNext()) {
     var range = matches.Current;        // System.Range（Start..End，End 不含）

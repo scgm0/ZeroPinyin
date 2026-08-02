@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Collections;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -365,15 +366,15 @@ public sealed class PinyinQuery {
 	}
 
 	/// <summary>
-	/// 返回文本中第一个匹配的完整区间（Start..End，End 不含），无匹配时返回 default（0..0）。
-	/// 可用 <c>text[result]</c> 零分配获取匹配切片。
+	/// 返回文本中第一个匹配的完整区间（Start..End，End 不含），无匹配时返回 null。
+	/// 可用 <c>text[result.Value]</c> 零分配获取匹配切片（先判空）。
 	/// </summary>
 	/// <param name="text">待搜索文本。</param>
-	/// <returns>匹配区间，或 default。</returns>
+	/// <returns>匹配区间；无匹配时为 null。</returns>
 	[SkipLocalsInit]
-	public Range FindFirstMatch(ReadOnlySpan<char> text) {
+	public Range? FindFirstMatch(ReadOnlySpan<char> text) {
 		if (text.IsEmpty || _fastForwardChars is null) {
-			return default;
+			return null;
 		}
 
 		ulong current = 0, acceptMask = _acceptMask;
@@ -390,7 +391,7 @@ public sealed class PinyinQuery {
 			if (current == 0) {
 				var pos = text[i..].IndexOfAny(_fastForwardChars);
 				if (pos < 0) {
-					return default;
+					return null;
 				}
 
 				i += pos;
@@ -440,13 +441,13 @@ public sealed class PinyinQuery {
 			}
 
 			if ((next & acceptMask) != 0) {
-				return new Range(startPos[_searchLength], i + 1);
+				return new(startPos[_searchLength], i + 1);
 			}
 
 			current = next;
 		}
 
-		return default;
+		return null;
 	}
 
 	/// <summary>
@@ -474,6 +475,11 @@ public sealed class PinyinQuery {
 
 		/// <summary>当前匹配区间（Start..End，End 不含；可用 text[Current] 零分配切片）。</summary>
 		public readonly Range Current => _current;
+
+		/// <summary>
+		/// 返回自身，使 <see cref="MatchEnumerator"/> 支持 <c>foreach</c> 枚举（鸭子类型模式，零分配）。
+		/// </summary>
+		public MatchEnumerator GetEnumerator() => this;
 
 		/// <summary>
 		/// 前进到下一个匹配区间。
@@ -553,7 +559,7 @@ public sealed class PinyinQuery {
 
 				if ((next & acceptMask) != 0) {
 					var mStart = startPos[q._searchLength];
-					_current = new Range(mStart, i + 1);
+					_current = new(mStart, i + 1);
 					_index = i + 1;
 					return true;
 				}
