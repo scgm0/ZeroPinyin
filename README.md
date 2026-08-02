@@ -124,28 +124,28 @@ IterationCount=10  WarmupCount=5
 
 | Method              | Query   | FileParam | Size      | Lines     | Mean        | Error     | StdDev    | Gen0     | Gen1     | Gen2     | Allocated |
 |-------------------- |-------- |---------- |----------:|----------:|------------:|----------:|----------:|---------:|---------:|---------:|----------:|
-| **Init**            | **yangmao** | **large.txt** | **13.5 MiB** | **1,000,000** | **20,854.0 μs** | **161.74 μs** | **106.98 μs** |        **-** |        **-** |        **-** | **1665088 B** |
-| Contains            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 24,946.3 μs |  60.40 μs |  31.59 μs |        - |        - |        - |         - |
-| CountMatches        | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,193.4 μs |  71.30 μs |  47.16 μs |        - |        - |        - |         - |
-| StartsWith          | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,754.0 μs |  15.13 μs |   9.01 μs |        - |        - |        - |         - |
-| EndsWith            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 24,799.6 μs | 450.48 μs | 297.97 μs |        - |        - |        - |         - |
-| IsMatch             | yangmao | large.txt |  13.5 MiB | 1,000,000 |  9,635.2 μs |  33.10 μs |  19.69 μs |        - |        - |        - |         - |
-| FindFirstIndex      | yangmao | large.txt |  13.5 MiB | 1,000,000 | 31,503.4 μs |  44.22 μs |  26.31 μs |        - |        - |        - |         - |
-| FindFirstMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 | 32,386.5 μs |  54.43 μs |  32.39 μs |        - |        - |        - |         - |
-| AllMatches          | yangmao | large.txt |  13.5 MiB | 1,000,000 | 33,585.5 μs |  53.73 μs |  28.10 μs |        - |        - |        - |         - |
-| ColdCompile         | yangmao | large.txt |  13.5 MiB | 1,000,000 |    315.8 μs |  23.10 μs |  15.28 μs |  11.7188 |   6.8359 |        - | 1105472 B |
-| MultiThreadCacheHit | yangmao | large.txt |  13.5 MiB | 1,000,000 | 17,573.0 μs | 234.55 μs | 155.14 μs |        - |        - |        - |    3904 B |
-| **Init**            | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **21,206.5 μs** |  **81.97 μs** |  **54.22 μs** | **156.2500** | **156.2500** | **156.2500** | **1666607 B** |
-| Contains            | yangmao | small.txt | 866.0 KiB |    37,450 |  1,231.3 μs |   2.78 μs |   1.66 μs |        - |        - |        - |         - |
-| CountMatches        | yangmao | small.txt | 866.0 KiB |    37,450 |  1,243.8 μs |   4.10 μs |   2.44 μs |        - |        - |        - |         - |
-| StartsWith          | yangmao | small.txt | 866.0 KiB |    37,450 |    321.7 μs |   1.70 μs |   0.89 μs |        - |        - |        - |         - |
-| EndsWith            | yangmao | small.txt | 866.0 KiB |    37,450 |    748.8 μs |   1.69 μs |   0.89 μs |        - |        - |        - |         - |
-| IsMatch             | yangmao | small.txt | 866.0 KiB |    37,450 |    383.5 μs |   0.58 μs |   0.35 μs |        - |        - |        - |         - |
-| FindFirstIndex      | yangmao | small.txt | 866.0 KiB |    37,450 |  1,522.9 μs |   1.02 μs |   0.67 μs |        - |        - |        - |         - |
-| FindFirstMatch      | yangmao | small.txt | 866.0 KiB |    37,450 |  1,407.3 μs |   1.77 μs |   1.06 μs |        - |        - |        - |         - |
-| AllMatches          | yangmao | small.txt | 866.0 KiB |    37,450 |  1,476.5 μs |   2.21 μs |   1.32 μs |        - |        - |        - |         - |
-| ColdCompile         | yangmao | small.txt | 866.0 KiB |    37,450 |    318.6 μs |  27.37 μs |  18.10 μs |  12.6953 |   7.8125 |   0.9766 | 1105481 B |
-| MultiThreadCacheHit | yangmao | small.txt | 866.0 KiB |    37,450 | 20,285.8 μs | 100.45 μs |  66.44 μs |        - |        - |        - |    3904 B |
+| **Init**            | **yangmao** | **large.txt** | **13.5 MiB** | **1,000,000** | **21,256.0 μs** |  **92.29 μs** |  **61.05 μs** |        **-** |        **-** |        **-** | **1665088 B** |
+| Contains            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,414.1 μs | 170.08 μs | 112.50 μs |        - |        - |        - |         - |
+| CountMatches        | yangmao | large.txt |  13.5 MiB | 1,000,000 | 25,084.2 μs | 41.85 μs | 27.68 μs |        - |        - |        - |         - |
+| StartsWith          | yangmao | large.txt |  13.5 MiB | 1,000,000 | 9,892.8 μs | 25.86 μs | 17.11 μs |        - |        - |        - |         - |
+| EndsWith            | yangmao | large.txt |  13.5 MiB | 1,000,000 | 24,762.8 μs | 87.30 μs | 57.75 μs |        - |        - |        - |         - |
+| IsMatch             | yangmao | large.txt |  13.5 MiB | 1,000,000 | 10,127.1 μs | 27.43 μs | 16.33 μs |        - |        - |        - |         - |
+| FindFirstIndex      | yangmao | large.txt |  13.5 MiB | 1,000,000 | 31,952.8 μs | 111.68 μs | 66.46 μs |        - |        - |        - |         - |
+| FindFirstMatch      | yangmao | large.txt |  13.5 MiB | 1,000,000 | 31,935.6 μs | 114.36 μs | 68.05 μs |        - |        - |        - |         - |
+| AllMatches          | yangmao | large.txt |  13.5 MiB | 1,000,000 | 33,576.2 μs | 101.39 μs | 53.03 μs |        - |        - |        - |         - |
+| ColdCompile         | yangmao | large.txt |  13.5 MiB | 1,000,000 | 313.2 μs | 17.88 μs | 11.83 μs | 11.7188 |  6.8359 |        - | 1105472 B |
+| MultiThreadCacheHit | yangmao | large.txt |  13.5 MiB | 1,000,000 | 20,568.6 μs | 554.04 μs | 366.46 μs |        - |        - |        - | 3904 B |
+| **Init**            | **yangmao** | **small.txt** | **866.0 KiB** |    **37,450** | **21,419.5 μs** | **159.39 μs** | **105.43 μs** | **156.2500** | **156.2500** | **156.2500** | **1666611 B** |
+| Contains            | yangmao | small.txt | 866.0 KiB |    37,450 | 1,216.9 μs | 4.22 μs | 2.51 μs |        - |        - |        - |         - |
+| CountMatches        | yangmao | small.txt | 866.0 KiB |    37,450 | 1,201.8 μs | 2.82 μs | 1.86 μs |        - |        - |        - |         - |
+| StartsWith          | yangmao | small.txt | 866.0 KiB |    37,450 | 321.1 μs | 0.44 μs | 0.23 μs |        - |        - |        - |         - |
+| EndsWith            | yangmao | small.txt | 866.0 KiB |    37,450 | 753.1 μs | 1.36 μs | 0.81 μs |        - |        - |        - |         - |
+| IsMatch             | yangmao | small.txt | 866.0 KiB |    37,450 | 306.0 μs | 1.61 μs | 0.96 μs |        - |        - |        - |         - |
+| FindFirstIndex      | yangmao | small.txt | 866.0 KiB |    37,450 | 1,396.3 μs | 3.16 μs | 2.09 μs |        - |        - |        - |         - |
+| FindFirstMatch      | yangmao | small.txt | 866.0 KiB |    37,450 | 1,416.1 μs | 2.61 μs | 1.55 μs |        - |        - |        - |         - |
+| AllMatches          | yangmao | small.txt | 866.0 KiB |    37,450 | 1,492.5 μs | 5.19 μs | 3.09 μs |        - |        - |        - |         - |
+| ColdCompile         | yangmao | small.txt | 866.0 KiB |    37,450 | 318.2 μs | 27.49 μs | 18.18 μs | 12.6953 |  7.8125 |  0.9766 | 1105481 B |
+| MultiThreadCacheHit | yangmao | small.txt | 866.0 KiB |    37,450 | 19,565.6 μs | 113.81 μs | 59.53 μs |        - |        - |        - | 3904 B |
 
 <details>
 <summary><b>点击查看数据字段说明</b></summary>
