@@ -32,6 +32,7 @@ public class FuzzyMatrixTests {
 	[InlineData("忙", "mang")]
 	[InlineData("针", "zhen")]
 	[InlineData("心", "xin")]
+	[InlineData("学", "xue")] // üe 写作 ue，与模糊配置无关
 	public void ExactSyllable_ShouldMatch_UnderBothConfigs(string text, string search) {
 		Assert.True(_fuzzy.Contains(text, search));
 		Assert.True(_strict.Contains(text, search));

@@ -10,6 +10,8 @@ public class PinyinMatcherTests {
 	[InlineData("羊毛出在羊身上", "yangmao", true)]
 	[InlineData("羊肉出在羊身上", "yangmao", false)]
 	[InlineData("Hello世界", "helloshi", true)]
+	[InlineData("JVM 虚拟机", "jvm", true)] // v 不是拼音键，靠逐字符直配
+	[InlineData("xvideo", "xvideo", true)]
 	public void Contains_ShouldMatchCorrectly(string text, string search, bool expected) {
 		Assert.Equal(expected, _matcher.Contains(text, search));
 	}
@@ -49,6 +51,7 @@ public class PinyinMatcherTests {
 	[InlineData("羊毛羊毛", "yangmao", 2)]
 	[InlineData("羊毛羊毛", "羊毛", 2)]
 	[InlineData("羊毛出在羊身上", "yang", 2)]
+	[InlineData("雪雪雪", "xue", 3)]
 	[InlineData("ababab", "ab", 3)]
 	[InlineData("abc", "d", 0)]
 	[InlineData("aaaa", "aa", 2)] // 状态机会在匹配后重置，不会计算重叠部分
@@ -85,6 +88,18 @@ public class PinyinMatcherTests {
 	[InlineData("重庆", "chongqing", true)]
 	[InlineData("重庆", "zhongqing", true)] // 重(chong/zhong)
 	public void Search_ShouldSupportPolyphones(string text, string search, bool expected) {
+		Assert.Equal(expected, _matcher.Contains(text, search));
+	}
+
+	[Theory]
+	[InlineData("学", "xue", true)]  // üe 在 j/q/x/y 后写作 ue
+	[InlineData("学", "xue2", true)]
+	[InlineData("学", "x", true)]    // 单字母前缀
+	[InlineData("学", "xue3", false)] // 音调不符
+	[InlineData("雪", "xue3", true)]
+	[InlineData("月光", "yueguang", true)]
+	[InlineData("确认", "queren", true)]
+	public void Search_ShouldSupportUeFinalAfterJqxy(string text, string search, bool expected) {
 		Assert.Equal(expected, _matcher.Contains(text, search));
 	}
 

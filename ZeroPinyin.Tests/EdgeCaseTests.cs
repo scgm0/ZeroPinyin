@@ -64,6 +64,22 @@ public class EdgeCaseTests {
 	}
 
 	[Fact]
+	public void CustomData_ShouldAcceptUeAndUmlautSpellings() {
+		// 规范写法 xue 与 xüe / xve 三种数据写法等价，v 与 u 查询写法互通；l 后的 ü 仍为 v
+		var canonical = new PinyinMatcher(new HanziPinyinMap("U+5B66: xue\nU+7389: yu\nU+7565: lüè"));
+		Assert.True(canonical.Contains("学", "xue"));
+		Assert.True(canonical.Contains("学", "xve"));
+		Assert.True(canonical.Contains("学", "xüe"));
+		Assert.True(canonical.Contains("玉", "yv"));
+		Assert.True(canonical.Contains("略", "lve"));
+		Assert.False(canonical.Contains("略", "lue"));
+
+		var umlaut = new PinyinMatcher(new HanziPinyinMap("U+5B66: xüe\nU+5C45: jv"));
+		Assert.True(umlaut.Contains("学", "xue"));
+		Assert.True(umlaut.Contains("居", "ju"));
+	}
+
+	[Fact]
 	public void AllMatches_ShouldHandleOverlappingCandidates() {
 		var matches = _matcher.AllMatches("aaaa", "aa");
 		Assert.True(matches.MoveNext());

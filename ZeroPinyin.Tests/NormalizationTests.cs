@@ -27,6 +27,12 @@ public class NormalizationTests {
 	[InlineData("绿色", "lvsè")]
 	[InlineData("女", "nǚ")]
 	[InlineData("女", "nv")]
+	// j/q/x/y 后的 ü 写作 u，v 与 ü 写法均应归一
+	[InlineData("学", "xue")]
+	[InlineData("学", "xve")]
+	[InlineData("学", "xüe")]
+	[InlineData("玉", "yv")]
+	[InlineData("群", "qvn")]
 	public void Contains_ShouldNormalizeUnicodeInput(string text, string search) {
 		Assert.True(_matcher.Contains(text, search));
 	}
@@ -43,8 +49,22 @@ public class NormalizationTests {
 	[InlineData("路", "lü")]
 	[InlineData("路", "lǜ")]
 	[InlineData("禄", "lü4")]
+	[InlineData("路", "lue")] // l 后的 üe 仍写作 ve，lue 不等于 lüe
+	[InlineData("女", "nu")] // nu 不是 nü
 	public void Contains_ShouldNotConfuseLuWithLü(string text, string search) {
 		Assert.False(_matcher.Contains(text, search));
+	}
+
+	[Theory]
+	[InlineData("jve4", "jue4")]  // 输入法 v 写法的数据归一为 u
+	[InlineData("qvn2", "qun2")]
+	[InlineData("yv4", "yu4")]
+	[InlineData("xue2", "xue2")]  // 规范写法保持不变
+	[InlineData("lve4", "lve4")]  // l 后的 ü 仍写作 v
+	public void Parse_ShouldNormalizeUmlautAfterJqxy(string input, string expected) {
+		var syl = PinyinParser.Parse(input);
+		Assert.True(syl.IsValid, input);
+		Assert.Equal(expected, syl.Numbered);
 	}
 
 	[Fact]

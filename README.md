@@ -22,6 +22,7 @@ dotnet add package ZeroPinyin
   * **中英混拼**：支持中文、拼音、数字混搭搜索（如 `zhong国123` 匹配 `中国123`），且自带同音字容错。
   * **大小写不敏感**：忽略搜索串的大小写。
   * **音调匹配**：支持附加数字音调精确搜索（如 `yang2mao2` 匹配 `羊毛`），搜索串也支持 Unicode 声调符号（如 `yángmáo`）。
+  * **ü 与输入法 v 别名**：`ü` 自动归一为 `v`（`lü` = `lv`）；j/q/x/y 后的 ü 按正词法写作 `u`，故 `xue`/`xüe`/`xve` 等价，`yv` 等同 `yu`。
 * **匹配定位**：`FindFirstIndex` 返回首个匹配的起始位置，`FindFirstMatch` 返回首个匹配的完整区间（无匹配返回 null），`AllMatches` 零分配枚举所有不重叠匹配区间（支持 `foreach`）——均基于 `System.Range`（`FindFirstIndex` 除外），可直接 `text[range]` 零分配切片，便于高亮与跳转。
 * ⚠️ **注意**：由于采用 `ulong` 寄存器作为底层状态机，单次搜索的字符串最大长度被硬性限制为 **63 个字符**，这对于大部分的即时匹配场景已经足够；如需匹配超长文本，建议将搜索串分段后逐段匹配。
 
@@ -60,9 +61,12 @@ bool result5 = matcher.Contains("长江", "zhangjiang");       // True（“长�
 bool result6 = matcher.Contains("中国", "zhong国");  // True（中英混拼）
 bool result7 = matcher.Contains("知识", "zisi");     // True（默认开启模糊音）
 
-// 声调符号与 ü 输入
+// 声调符号与 ü / v 输入
 bool result8 = matcher.Contains("羊毛", "yángmáo"); // True（声调符号自动规范化）
 bool result9 = matcher.Contains("绿", "lü");        // True（ü 自动归一为 v）
+bool result10 = matcher.Contains("学", "xue");      // True（j/q/x/y 后的 üe 写作 ue）
+bool result11 = matcher.Contains("学", "xve");      // True（输入法 v 别名等价于 ue）
+bool result12 = matcher.Contains("玉", "yv");       // True（j/q/x/y 后的 v 等同 u）
 
 // 匹配定位：返回 System.Range，可直接零分配切片
 int index = matcher.FindFirstIndex("一只羊毛", "yangmao"); // 2（首个匹配的起始位置）

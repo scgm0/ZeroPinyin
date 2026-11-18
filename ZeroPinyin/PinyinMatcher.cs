@@ -42,7 +42,8 @@ public sealed class PinyinMatcher {
 
 	/// <summary>
 	/// 编译搜索串为查询对象（结果缓存，相同搜索串返回同一实例）。
-	/// 搜索串支持声调符号（如 "yángmáo"）与 ü（如 "lü"），自动规范化。
+	/// 搜索串支持声调符号（如 "yángmáo"）与 ü（如 "lü"），自动规范化；
+	/// j/q/x/y 后的 ü 写作 u，故 v 写法视同 u（如 "xve" = "xue"、"yv" = "yu"）。
 	/// </summary>
 	/// <param name="search">拼音搜索串。</param>
 	/// <returns>编译后的查询。</returns>

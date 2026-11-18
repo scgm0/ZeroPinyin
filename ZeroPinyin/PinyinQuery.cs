@@ -51,9 +51,6 @@ public sealed class PinyinQuery {
 		ulong exactMatchMask = 0;
 		char[]? exactChars = null;
 
-		var (intKeys, intRanges, intValues, singleCharRanges) = (prefixData.IntKeys, prefixData.IntRanges, prefixData.IntValues, prefixData.SingleCharRanges);
-		var (endKeys, endRanges, endValues) = (prefixData.EndKeys, prefixData.EndRanges, prefixData.EndValues);
-
 		for (var s = 0; s < searchLength; s++) {
 			var c = search[s];
 			var lowerClass = map.CharToClass[c];
@@ -75,6 +72,7 @@ public sealed class PinyinQuery {
 				if (isPinyin) {
 					var maxLen = Math.Min(7, searchLength - s);
 					ulong encoded = 0;
+					ulong aliasEncoded = 0;
 
 					for (var len = 1; len <= maxLen; len++) {
 						ulong b = search[s + len - 1];
@@ -84,19 +82,18 @@ public sealed class PinyinQuery {
 
 						encoded |= b << (len - 1) * 8;
 
-						var isEnd = s + len == searchLength;
-						var keys = isEnd ? endKeys : intKeys;
-						var ranges = isEnd ? endRanges : intRanges;
-						var values = isEnd ? endValues : intValues;
+						// j/q/x/y 后的 v 是 ü 的输入法写法（如 xve/yv），另附一份写作 u 的规范键。
+						var aliasByte = b;
+						if (b == 'v' && len > 1 && PinyinParser.IsUmlautInitial(LowerAscii(search[s + len - 2]))) {
+							aliasByte = 'u';
+						}
 
-						var idx = len == 1 ? singleCharRanges[(byte)encoded] : Array.BinarySearch(keys, encoded);
-						if (idx >= 0) {
-							var range = ranges[idx];
-							var mask = 1UL << (s + len);
-							var endIdx = range.Offset + range.Count;
-							for (var i = range.Offset; i < endIdx; i++) {
-								_flatTransitions[(values[i] << _shift) + s] |= mask;
-							}
+						aliasEncoded |= aliasByte << (len - 1) * 8;
+
+						var isEnd = s + len == searchLength;
+						ApplyPrefix(encoded, s, len, isEnd, prefixData);
+						if (aliasEncoded != encoded) {
+							ApplyPrefix(aliasEncoded, s, len, isEnd, prefixData);
 						}
 					}
 				} else if (c >= 256 && lowerClass >= 256) {
@@ -170,6 +167,28 @@ public sealed class PinyinQuery {
 			_fastForwardChars = SearchValues.Create(scSpan);
 		}
 	}
+
+	/// <summary>将搜索串中 [s, s+len) 前缀的编码键写入转换矩阵（内部实现）。</summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private void ApplyPrefix(ulong encoded, int s, int len, bool isEnd, PinyinPrefixData prefixData) {
+		var keys = isEnd ? prefixData.EndKeys : prefixData.IntKeys;
+		var ranges = isEnd ? prefixData.EndRanges : prefixData.IntRanges;
+		var values = isEnd ? prefixData.EndValues : prefixData.IntValues;
+		var idx = len == 1 ? prefixData.SingleCharRanges[(byte)encoded] : Array.BinarySearch(keys, encoded);
+		if (idx < 0) {
+			return;
+		}
+
+		var range = ranges[idx];
+		var mask = 1UL << (s + len);
+		var endIdx = range.Offset + range.Count;
+		for (var i = range.Offset; i < endIdx; i++) {
+			_flatTransitions[(values[i] << _shift) + s] |= mask;
+		}
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static private char LowerAscii(char c) => c is >= 'A' and <= 'Z' ? (char)(c | 0x20) : c;
 
 	/// <summary>判断文本中是否包含搜索串的拼音匹配。</summary>
 	[SkipLocalsInit]

@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace ZeroPinyin;
 
 /// <summary>拼音解析器：提供声母/韵母表与音节解析、声调符号规范化。</summary>
@@ -8,13 +10,19 @@ public static class PinyinParser {
 		"g", "k", "h", "j", "q", "x", "r", "z", "c", "s", "y", "w"
 	];
 
-	/// <summary>韵母表（v 表示 ü 韵母，如 lv = lü）。</summary>
+	/// <summary>
+	/// 韵母表（v 表示 ü 韵母，如 lv = lü）；j/q/x/y 后的 ü 按正词法写作 u（如 xue = xüe、ju = jü）。
+	/// </summary>
 	public static readonly string[] FinalList = [
 		"a", "o", "e", "ai", "ei", "ao", "ou", "an", "en", "ang", "eng", "ong", "er",
 		"i", "ia", "ie", "iao", "iu", "ian", "in", "iang", "ing", "iong",
-		"u", "ua", "uo", "uai", "ui", "uan", "un", "uang", "ueng",
+		"u", "ua", "uo", "uai", "ui", "uan", "un", "uang", "ueng", "ue",
 		"v", "ve", "van", "vn"
 	];
+
+	/// <summary>判断字符是否为 j/q/x/y（ü 写作 u 的声母，忽略大小写）。</summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static bool IsUmlautInitial(char c) => c is 'j' or 'J' or 'q' or 'Q' or 'x' or 'X' or 'y' or 'Y';
 
 	/// <summary>
 	/// 将带声调符号或 ü 的拼音字符串规范化为纯 ASCII 形式（声调转为尾部数字，ü 转为 v）。
@@ -70,7 +78,8 @@ public static class PinyinParser {
 	}
 
 	/// <summary>
-	/// 解析一个拼音字符串（如 "zhong1"、"lüè"）为音节；解析失败返回 <see cref="PinyinSyllable.IsValid"/> 为 false 的默认值。
+	/// 解析一个拼音字符串（如 "zhong1"、"lüè"、"xue"）为音节；解析失败返回 <see cref="PinyinSyllable.IsValid"/> 为 false 的默认值。
+	/// j/q/x/y 后的 ü 按正词法写作 u，故 "jüe"、"jve" 与 "jue" 解析为同一音节。
 	/// </summary>
 	/// <param name="input">拼音字符串（声母 + 韵母，可带尾部数字声调）。</param>
 	/// <returns>解析结果。</returns>
@@ -93,8 +102,16 @@ public static class PinyinParser {
 			var ini = InitList[i];
 			if (syl.StartsWith(ini, StringComparison.OrdinalIgnoreCase)) {
 				var finalSpan = syl[ini.Length..];
+
+				// j/q/x/y 后的 ü 按正词法写作 u，故数据里的 xüe/xve 形式归一为 ue 与 xue 同键。
+				var umlautAsU = finalSpan.Length > 0 && finalSpan[0] is 'v' or 'V' && IsUmlautInitial(ini[0]);
+
 				for (var j = 0; j < FinalList.Length; j++) {
-					if (finalSpan.SequenceEqual(FinalList[j])) {
+					var fin = FinalList[j];
+					var hit = umlautAsU
+						? fin.Length == finalSpan.Length && fin[0] == 'u' && finalSpan[1..].SequenceEqual(fin.AsSpan(1))
+						: finalSpan.SequenceEqual(fin);
+					if (hit) {
 						return new((byte)(i + 1), (byte)(j + 1), tone);
 					}
 				}
