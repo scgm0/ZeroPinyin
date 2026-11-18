@@ -38,7 +38,7 @@ dotnet add package ZeroPinyin
 4. **极致的内存结构布局**：
    * 在初始化解析拼音字典时，使用 `[InlineArray]` 结合 `[StructLayout(Pack = 1)]`，将多音字状态原位压缩至最小结构体。
    * 利用基于换行符计数的算法提前分配 `Dictionary` 与 `List` 的容量，尽量消除内部数组扩容带来的堆碎片（Gen1/Gen2 回收）。
-5. **双目标框架**：同时产出 `net10.0` 与 `net11.0` 程序集；`net11.0` 构建启用 **Runtime Async**（`runtime-async=on`，.NET 11 的运行时异步 V2），async 方法由运行时管理挂起点而非编译器状态机。
+5. **双目标框架**：同时产出 `net10.0` 与 `net11.0` 程序集；`net11.0` 构建启用 **Runtime Async**（`runtime-async=on`，.NET 11 的运行时异步 V2），async 方法由运行时管理挂起点而非编译器状态机——现有 API 全为同步零分配实现，该开关不参与其执行路径，仅约束未来新增 async API 的编译方式。
 
 ## 🚀 快速起步
 
