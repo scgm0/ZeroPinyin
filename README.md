@@ -2,7 +2,7 @@
 
 # ZeroPinyin
 
-ZeroPinyin 是一个为 **.NET 10+** 设计的高性能、零内存分配的即时中文拼音匹配引擎。
+ZeroPinyin 是一个为 **.NET 10+** 设计的高性能、零内存分配的即时中文拼音匹配引擎，同时提供 `net10.0` 与 `net11.0` 双目标构建。
 
 通过将非确定性有限状态自动机 (NFA) 压缩至 `ulong` 位运算，配合现代 C# 的底层内存控制特性（如 `Span<T>`、`ref locals`、`[InlineArray]`），能够在极低延迟下完成数百万行文本的拼音扫描，且搜索过程中不产生垃圾回收与内存分配。
 
@@ -38,6 +38,7 @@ dotnet add package ZeroPinyin
 4. **极致的内存结构布局**：
    * 在初始化解析拼音字典时，使用 `[InlineArray]` 结合 `[StructLayout(Pack = 1)]`，将多音字状态原位压缩至最小结构体。
    * 利用基于换行符计数的算法提前分配 `Dictionary` 与 `List` 的容量，尽量消除内部数组扩容带来的堆碎片（Gen1/Gen2 回收）。
+5. **双目标框架**：同时产出 `net10.0` 与 `net11.0` 程序集；`net11.0` 构建启用 **Runtime Async**（`runtime-async=on`，.NET 11 的运行时异步 V2），async 方法由运行时管理挂起点而非编译器状态机。
 
 ## 🚀 快速起步
 
