@@ -140,14 +140,7 @@ public sealed class HanziPinyinMap {
 					continue;
 				}
 
-				var exists = false;
-				for (var i = 0; i < sylCount; i++)
-					if (tempSyls[i] == syl) {
-						exists = true;
-						break;
-					}
-
-				if (!exists && sylCount < 16) {
+				if (sylCount < 16 && !tempSyls.AsSpan(0, sylCount).Contains(syl)) {
 					tempSyls[sylCount++] = syl;
 				}
 			}
@@ -160,7 +153,7 @@ public sealed class HanziPinyinMap {
 			activeSpan.Sort();
 
 			var sig = new SyllableSignature();
-			for (var i = 0; i < sylCount; i++) sig.Add(activeSpan[i]);
+			foreach (var s in activeSpan) sig.Add(s);
 
 			if (!uniqueSets.TryGetValue(sig, out var classId)) {
 				classId = (ushort)classRangesList.Count;

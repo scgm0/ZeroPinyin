@@ -86,13 +86,13 @@ public static class PrefixMapBuilder {
 
 		ulong encoded = 0;
 		var shift = 0;
-		for (var i = 0; i < iniLen; i++) {
-			encoded |= (ulong)ini[i] << shift;
+		foreach (var c in ini) {
+			encoded |= (ulong)c << shift;
 			shift += 8;
 		}
 
-		for (var i = 0; i < finLen; i++) {
-			encoded |= (ulong)fin[i] << shift;
+		foreach (var c in fin) {
+			encoded |= (ulong)c << shift;
 			shift += 8;
 		}
 
@@ -252,8 +252,7 @@ public static class PrefixMapBuilder {
 		for (ushort id = 256; id < map.ClassCount; id++) {
 			var range = map.ClassRanges[id];
 			var syllables = map.FlatSyllables.AsSpan(range.Offset, range.Count);
-			for (var s = 0; s < syllables.Length; s++) {
-				var py = syllables[s];
+			foreach (var py in syllables) {
 				GetFuzzyInitials(py.Initial, fuzzyIni, out var ini0, out var ini1);
 				GetFuzzyFinals(py.Final, fuzzyFin, out var fin0, out var fin1);
 
@@ -285,8 +284,7 @@ public static class PrefixMapBuilder {
 		for (ushort id = 256; id < map.ClassCount; id++) {
 			var range = map.ClassRanges[id];
 			var syllables = map.FlatSyllables.AsSpan(range.Offset, range.Count);
-			for (var s = 0; s < syllables.Length; s++) {
-				var py = syllables[s];
+			foreach (var py in syllables) {
 				GetFuzzyInitials(py.Initial, fuzzyIni, out var ini0, out var ini1);
 				GetFuzzyFinals(py.Final, fuzzyFin, out var fin0, out var fin1);
 
