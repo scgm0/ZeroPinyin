@@ -134,6 +134,18 @@ public static class PrefixMapBuilder {
 			return;
 		}
 
+		// 键按 8 位字符打包（声母 + 韵母 + 音调，最多 7 个字符），高位恒零，按实际键宽决定 pass 数
+		var maxKey = 0UL;
+		for (var i = 0; i < count; i++) {
+			maxKey |= keys[i];
+		}
+
+		var passCount = 0;
+		while (maxKey != 0) {
+			passCount++;
+			maxKey >>= 8;
+		}
+
 		var tmpKeys = UlongPool.Rent(count);
 		var tmpIds = UshortPool.Rent(count);
 		Span<int> counts = stackalloc int[256];
@@ -143,7 +155,7 @@ public static class PrefixMapBuilder {
 		var toKeys = tmpKeys;
 		var toIds = tmpIds;
 
-		for (var pass = 0; pass < 8; pass++) {
+		for (var pass = 0; pass < passCount; pass++) {
 			var shift = pass * 8;
 			counts.Clear();
 			for (var i = 0; i < count; i++) {

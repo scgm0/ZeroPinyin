@@ -155,7 +155,8 @@ public sealed class PinyinMatcher {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static private bool NeedsNormalization(ReadOnlySpan<char> search) {
 		foreach (var c in search) {
-			if (PinyinParser.IsNormalizableChar(c)) {
+			// 外层范围短路：先付一次比较，避免 ASCII 字符进入 IsNormalizableChar 的比较链
+			if (c is >= '\u00C0' and <= '\u1EFF' && PinyinParser.IsNormalizableChar(c)) {
 				return true;
 			}
 		}

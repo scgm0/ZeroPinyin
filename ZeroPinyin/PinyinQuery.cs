@@ -176,7 +176,7 @@ public sealed class PinyinQuery {
 		var keys = isEnd ? prefixData.EndKeys : prefixData.IntKeys;
 		var ranges = isEnd ? prefixData.EndRanges : prefixData.IntRanges;
 		var values = isEnd ? prefixData.EndValues : prefixData.IntValues;
-		var idx = len == 1 ? prefixData.SingleCharRanges[(byte)encoded] : Array.BinarySearch(keys, encoded);
+		var idx = len == 1 ? prefixData.SingleCharRanges[(byte)encoded] : keys.AsSpan().BinarySearch(encoded);
 		if (idx < 0) {
 			return;
 		}
@@ -187,6 +187,26 @@ public sealed class PinyinQuery {
 		for (var i = range.Offset; i < endIdx; i++) {
 			_flatTransitions[(values[i] << _shift) + s] |= mask;
 		}
+	}
+
+	/// <summary>汉字精确匹配：清除搜索串字符与文本字符不一致的状态位（无精确要求时直接返回）。</summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private ulong FilterExact(ulong next, char textChar) {
+		var exactCheck = next & _exactMatchMask;
+		if (exactCheck == 0) {
+			return next;
+		}
+
+		ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
+		do {
+			var s = BitOperations.TrailingZeroCount(exactCheck);
+			exactCheck &= exactCheck - 1;
+			if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
+				next &= ~(1UL << s);
+			}
+		} while (exactCheck != 0);
+
+		return next;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -226,18 +246,7 @@ public sealed class PinyinQuery {
 				next |= Unsafe.Add(ref stateTransRef, s);
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if ((next & acceptMask) != 0) {
 				return true;
@@ -284,18 +293,7 @@ public sealed class PinyinQuery {
 				next |= Unsafe.Add(ref stateTransRef, s);
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if ((next & acceptMask) != 0) {
 				matchCount++;
@@ -370,18 +368,7 @@ public sealed class PinyinQuery {
 				next |= rowBits;
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if ((next & acceptMask) != 0) {
 				return startPos[_searchLength];
@@ -455,18 +442,7 @@ public sealed class PinyinQuery {
 				next |= rowBits;
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if ((next & acceptMask) != 0) {
 				return new(startPos[_searchLength], i + 1);
@@ -572,18 +548,7 @@ public sealed class PinyinQuery {
 					next |= rowBits;
 				}
 
-				if ((next & q._exactMatchMask) != 0) {
-					var exactCheck = next & q._exactMatchMask;
-					var textChar = Unsafe.Add(ref textRef, i);
-					ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(q._exactChars!);
-					while (exactCheck != 0) {
-						var s = BitOperations.TrailingZeroCount(exactCheck);
-						exactCheck &= exactCheck - 1;
-						if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-							next &= ~(1UL << s);
-						}
-					}
-				}
+				next = q.FilterExact(next, Unsafe.Add(ref textRef, i));
 
 				if ((next & acceptMask) != 0) {
 					var mStart = startPos[q._searchLength];
@@ -636,18 +601,7 @@ public sealed class PinyinQuery {
 				next |= Unsafe.Add(ref stateTransRef, s);
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if (i == len - 1) {
 				return (next & acceptMask) != 0;
@@ -684,18 +638,7 @@ public sealed class PinyinQuery {
 				next |= Unsafe.Add(ref stateTransRef, s);
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if ((next & acceptMask) != 0) {
 				return true;
@@ -736,18 +679,7 @@ public sealed class PinyinQuery {
 				next |= Unsafe.Add(ref stateTransRef, s);
 			}
 
-			if ((next & _exactMatchMask) != 0) {
-				var exactCheck = next & _exactMatchMask;
-				var textChar = Unsafe.Add(ref textRef, i);
-				ref var exactCharsRef = ref MemoryMarshal.GetArrayDataReference(_exactChars!);
-				while (exactCheck != 0) {
-					var s = BitOperations.TrailingZeroCount(exactCheck);
-					exactCheck &= exactCheck - 1;
-					if (textChar != Unsafe.Add(ref exactCharsRef, s)) {
-						next &= ~(1UL << s);
-					}
-				}
-			}
+			next = FilterExact(next, Unsafe.Add(ref textRef, i));
 
 			if (next == 0) {
 				return false;
