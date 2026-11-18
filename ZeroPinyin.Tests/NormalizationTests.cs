@@ -153,6 +153,43 @@ public class NormalizationTests {
 		Assert.False(_matcher.Contains(text, search), $"{text} 不应匹配 {search}");
 	}
 
+	[Theory]
+	[InlineData("xue2", 1)]
+	[InlineData("xue", 1)]
+	[InlineData("zhōng", 1)]
+	[InlineData("túnwǎ", 2)] // 连读（注音 ㄊㄨㄣˊㄨㄚ）
+	[InlineData("tun2wa3", 2)]
+	[InlineData("tun2wa3zhi4", 3)]
+	[InlineData("zzz", 0)]
+	[InlineData("tun2zzz3", 0)]
+	public void ParseSyllables_ShouldSplitContinuousReading(string input, int expected) {
+		Span<PinyinSyllable> buf = stackalloc PinyinSyllable[16];
+		Assert.Equal(expected, PinyinParser.ParseSyllables(input, buf));
+
+		if (input == "túnwǎ") {
+			Assert.Equal("tun2", buf[0].Numbered); // 每个音节的声调需各自保留
+			Assert.Equal("wa3", buf[1].Numbered);
+		}
+	}
+
+	[Theory]
+	[InlineData("瓲", "tun")] // 连读（ㄊㄨㄣˊㄨㄚ）拆开后的各音节
+	[InlineData("瓲", "wa")]
+	[InlineData("瓲", "tun2")]
+	[InlineData("瓲", "wa3")]
+	public void ContinuousReading_ShouldExposeEachSyllable(string text, string search) {
+		Assert.True(_matcher.Contains(text, search), $"{text} 应匹配 {search}");
+		Assert.Equal(new Range(0, 1), _matcher.FindFirstMatch(text, search));
+	}
+
+	[Theory]
+	[InlineData("瓲", "tunwa")]  // 整读键不做支持：连续发音已弃用，键化会拉高初始化耗时
+	[InlineData("瓲", "tun2wa3")]
+	[InlineData("㕶", "tunwa")]
+	public void ContinuousReading_WholeReading_ShouldNotMatch(string text, string search) {
+		Assert.False(_matcher.Contains(text, search), $"{text} 不应匹配 {search}");
+	}
+
 	[Fact]
 	public void IsNormalizableChar_ShouldMatchRemoveToneMarks() {
 		// 防漂移：凡 RemoveToneMarks 会改变结果的字符，必须被 IsNormalizableChar 识别（否则搜索串不会触发归一化）

@@ -63,7 +63,7 @@ public static class PinyinParser {
 	/// 例如："yáng" → "yang2"，"lüè" → "lve4"，"m̀" → "m4"。
 	/// 组合声调符（如 U+0300、U+0304）只提取声调，不输出字符。
 	/// 注意：本方法为单音节语义（数据解析按音节逐段调用）；多音节串仅保留最后一个音调数字，
-	/// 搜索端多音节精确音调请使用数字音调形式（如 "yang2mao2"）。
+	/// 搜索端多音节精确音调请使用数字音调形式（如 "yang2mao2"），多音节数据解析请用 <see cref="ParseSyllables"/>。
 	/// </summary>
 	/// <param name="input">输入拼音字符串。</param>
 	/// <param name="buf">输出缓冲区，必须足够容纳规范化结果（最多 input 长度 + 1）。</param>
@@ -77,43 +77,7 @@ public static class PinyinParser {
 				continue;
 			}
 
-			var (b, t) = c switch {
-				'ā' => ('a', 1),
-				'á' => ('a', 2),
-				'ǎ' => ('a', 3),
-				'à' => ('a', 4),
-				'ē' => ('e', 1),
-				'é' => ('e', 2),
-				'ě' => ('e', 3),
-				'è' => ('e', 4),
-				'ī' => ('i', 1),
-				'í' => ('i', 2),
-				'ǐ' => ('i', 3),
-				'ì' => ('i', 4),
-				'ō' => ('o', 1),
-				'ó' => ('o', 2),
-				'ǒ' => ('o', 3),
-				'ò' => ('o', 4),
-				'ū' => ('u', 1),
-				'ú' => ('u', 2),
-				'ǔ' => ('u', 3),
-				'ù' => ('u', 4),
-				'ǖ' => ('v', 1),
-				'ǘ' => ('v', 2),
-				'ǚ' => ('v', 3),
-				'ǜ' => ('v', 4),
-				'ü' => ('v', 0),
-				'ḿ' => ('m', 2), // 成音节鼻音的带调形式（嗯/呣/噷 等叹词）
-				'ń' => ('n', 2),
-				'ň' => ('n', 3),
-				'ǹ' => ('n', 4),
-				'ế' => ('ê', 2), // ê 的带调形式（欸/誒）；更简单的 ēi/éi 等写法亦可匹配
-				'ề' => ('ê', 4),
-				'ể' => ('ê', 3),
-				'ệ' => ('ê', 4),
-				'ễ' => ('ê', 0),
-				_ => (c, 0)
-			};
+			var (b, t) = MapToneChar(c);
 
 			buf[pos++] = b;
 			if (t != 0) {
@@ -127,6 +91,46 @@ public static class PinyinParser {
 
 		return pos;
 	}
+
+	/// <summary>带调字符到（无调字符, 声调）的映射；非带调字符原样返回。</summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static private (char Char, byte Tone) MapToneChar(char c) => c switch {
+		'ā' => ('a', 1),
+		'á' => ('a', 2),
+		'ǎ' => ('a', 3),
+		'à' => ('a', 4),
+		'ē' => ('e', 1),
+		'é' => ('e', 2),
+		'ě' => ('e', 3),
+		'è' => ('e', 4),
+		'ī' => ('i', 1),
+		'í' => ('i', 2),
+		'ǐ' => ('i', 3),
+		'ì' => ('i', 4),
+		'ō' => ('o', 1),
+		'ó' => ('o', 2),
+		'ǒ' => ('o', 3),
+		'ò' => ('o', 4),
+		'ū' => ('u', 1),
+		'ú' => ('u', 2),
+		'ǔ' => ('u', 3),
+		'ù' => ('u', 4),
+		'ǖ' => ('v', 1),
+		'ǘ' => ('v', 2),
+		'ǚ' => ('v', 3),
+		'ǜ' => ('v', 4),
+		'ü' => ('v', 0),
+		'ḿ' => ('m', 2), // 成音节鼻音的带调形式（嗯/呣/噷 等叹词）
+		'ń' => ('n', 2),
+		'ň' => ('n', 3),
+		'ǹ' => ('n', 4),
+		'ế' => ('ê', 2), // ê 的带调形式（欸/誒）
+		'ề' => ('ê', 4),
+		'ể' => ('ê', 3),
+		'ệ' => ('ê', 4),
+		'ễ' => ('ê', 0),
+		_ => (c, 0)
+	};
 
 	/// <summary>
 	/// 解析一个拼音字符串（如 "zhong1"、"lüè"、"xue"）为音节；解析失败返回 <see cref="PinyinSyllable.IsValid"/> 为 false 的默认值。
@@ -142,13 +146,119 @@ public static class PinyinParser {
 		byte tone = 0;
 		var toneLen = 0;
 
-		if (input.Length > 1 && char.IsAsciiDigit(input[^1]) && input[^1] <= '5') {
+		if (input.Length > 1 && input[^1] is >= '1' and <= '5') {
 			tone = (byte)(input[^1] - '0');
 			toneLen = 1;
 		}
 
-		var syl = input[..^toneLen];
+		var (ini, fin) = ParsePlain(input[..^toneLen]);
+		return fin == 0 ? default : new(ini, fin, tone);
+	}
 
+	/// <summary>
+	/// 解析可能由多个音节连写的拼音串（如 pinyin-data v0.16.0 中 瓲 "túnwǎ"、注音 ㄊㄨㄣˊㄨㄚ），
+	/// 先归一化并把声调记到所修饰字符上，再按"最长音节优先"切分；仅当所有段都是有效音节且每段至多一个声调时成功。
+	/// 连读按多个独立音节返回（不生成整读复合键：该读音已弃用，且键化会拉高初始化耗时）；单音节输入返回 1。
+	/// </summary>
+	/// <param name="input">原始拼音串（可含声调符号、ü、尾部数字声调）。</param>
+	/// <param name="syllables">输出缓冲区，容量需不小于音节数（建议至少 16）。</param>
+	/// <returns>音节数量；无法完整解析或缓冲区不足时为 0。</returns>
+	public static int ParseSyllables(ReadOnlySpan<char> input, Span<PinyinSyllable> syllables) {
+		Span<char> chars = stackalloc char[32];
+		Span<byte> tones = stackalloc byte[32];
+
+		var length = NormalizeWithTonePositions(input, chars, tones);
+		if (length == 0) {
+			return 0;
+		}
+
+		var count = 0;
+		return TrySplit(chars[..length], tones[..length], 0, syllables, ref count) ? count : 0;
+	}
+
+	/// <summary>归一化字符并把声调记录到所修饰的字符下标上（<paramref name="tones"/>[i] 为 chars[i] 的声调，0 表示无）。</summary>
+	static private int NormalizeWithTonePositions(ReadOnlySpan<char> input, Span<char> chars, Span<byte> tones) {
+		var pos = 0;
+		foreach (var c in input) {
+			if (CombiningTone(c) is var combiningTone and not 0) {
+				if (pos == 0) {
+					return 0;
+				}
+
+				tones[pos - 1] = combiningTone;
+				continue;
+			}
+
+			if (c is >= '1' and <= '5') {
+				if (pos == 0) {
+					return 0;
+				}
+
+				tones[pos - 1] = (byte)(c - '0');
+				continue;
+			}
+
+			if (pos >= chars.Length) {
+				return 0;
+			}
+
+			var (b, t) = MapToneChar(c);
+			chars[pos] = b;
+			if (t != 0) {
+				tones[pos] = t;
+			}
+
+			pos++;
+		}
+
+		return pos;
+	}
+
+	/// <summary>按最长音节优先递归切分，声调取段内所修饰字符的声调。</summary>
+	static private bool TrySplit(ReadOnlySpan<char> chars, ReadOnlySpan<byte> tones, int start, Span<PinyinSyllable> syllables, ref int count) {
+		if (start == chars.Length) {
+			return true;
+		}
+
+		if (count >= syllables.Length) {
+			return false;
+		}
+
+		var maxLen = Math.Min(7, chars.Length - start);
+		for (var len = maxLen; len >= 1; len--) {
+			byte tone = 0;
+			var toneCount = 0;
+			for (var i = start; i < start + len; i++) {
+				if (tones[i] == 0) {
+					continue;
+				}
+
+				tone = tones[i];
+				toneCount++;
+			}
+
+			if (toneCount > 1) {
+				continue;
+			}
+
+			var (ini, fin) = ParsePlain(chars.Slice(start, len));
+			if (fin == 0) {
+				continue;
+			}
+
+			syllables[count++] = new(ini, fin, tone);
+			if (TrySplit(chars, tones, start + len, syllables, ref count)) {
+				return true;
+			}
+
+			count--;
+		}
+
+		return false;
+	}
+
+	/// <summary>解析无声调音节（声母 + 韵母），返回声母与韵母下标（韵母为 0 表示失败）。</summary>
+	static private (byte Ini, byte Fin) ParsePlain(ReadOnlySpan<char> syl) {
 		for (var i = 0; i < InitList.Length; i++) {
 			var ini = InitList[i];
 			if (syl.StartsWith(ini, StringComparison.OrdinalIgnoreCase)) {
@@ -163,7 +273,7 @@ public static class PinyinParser {
 						? fin.Length == finalSpan.Length && fin[0] == 'u' && finalSpan[1..].SequenceEqual(fin.AsSpan(1))
 						: finalSpan.SequenceEqual(fin);
 					if (hit) {
-						return new((byte)(i + 1), (byte)(j + 1), tone);
+						return ((byte)(i + 1), (byte)(j + 1));
 					}
 				}
 
@@ -173,10 +283,10 @@ public static class PinyinParser {
 
 		for (var j = 0; j < FinalList.Length; j++) {
 			if (syl.SequenceEqual(FinalList[j])) {
-				return new(0, (byte)(j + 1), tone);
+				return (0, (byte)(j + 1));
 			}
 		}
 
-		return default;
+		return (0, 0);
 	}
 }

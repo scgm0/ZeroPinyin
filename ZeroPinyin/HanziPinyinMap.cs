@@ -92,6 +92,7 @@ public sealed class HanziPinyinMap {
 
 		Span<char> sharedBuf = stackalloc char[32];
 		var tempSyls = new PinyinSyllable[16];
+		Span<PinyinSyllable> parts = stackalloc PinyinSyllable[16];
 
 		foreach (var rawLine in text.EnumerateLines()) {
 			var line = rawLine.Trim();
@@ -134,14 +135,25 @@ public sealed class HanziPinyinMap {
 					continue;
 				}
 
+				// 快路径：绝大多数字读音是单音节
 				var normLen = PinyinParser.RemoveToneMarks(seg, sharedBuf);
 				var syl = PinyinParser.Parse(sharedBuf[..normLen]);
-				if (!syl.IsValid) {
+				if (syl.IsValid) {
+					if (sylCount < 16 && !tempSyls.AsSpan(0, sylCount).Contains(syl)) {
+						tempSyls[sylCount++] = syl;
+					}
+
 					continue;
 				}
 
-				if (sylCount < 16 && !tempSyls.AsSpan(0, sylCount).Contains(syl)) {
-					tempSyls[sylCount++] = syl;
+				// 兜底：多音节连读（如 pinyin-data v0.16.0 中 珲 túnwǎ = ㄊㄨㄣˊㄨㄚ）按音节拆开，
+				// 逐音节声调各自保留；连续发音本身不再单独成键（已弃用，键化会拉高初始化耗时）
+				var partCount = PinyinParser.ParseSyllables(seg, parts);
+				for (var p = 0; p < partCount; p++) {
+					var part = parts[p];
+					if (sylCount < 16 && !tempSyls.AsSpan(0, sylCount).Contains(part)) {
+						tempSyls[sylCount++] = part;
+					}
 				}
 			}
 
