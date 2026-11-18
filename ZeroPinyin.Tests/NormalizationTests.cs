@@ -14,6 +14,9 @@ public class NormalizationTests {
 	[InlineData("ňg", "ng3")]
 	[InlineData("m\u0300", "m4")] // m + 组合重音符
 	[InlineData("n\u0304", "n1")] // n + 组合长音符
+	[InlineData("ế", "ê2")]       // ê 的带调形式（诶/誒）
+	[InlineData("ề", "ê4")]
+	[InlineData("ê\u0304", "ê1")]  // ê + 组合长音符
 	public void RemoveToneMarks_ShouldNormalize(string input, string expected) {
 		Span<char> buf = stackalloc char[64];
 		var len = PinyinParser.RemoveToneMarks(input, buf);
@@ -76,6 +79,8 @@ public class NormalizationTests {
 	[InlineData("ng2", "", "ng", "ng2")]
 	[InlineData("hng", "h", "ng", "hng")]
 	[InlineData("hm", "h", "m", "hm")]
+	[InlineData("ê", "", "ê", "ê")]
+	[InlineData("ê2", "", "ê", "ê2")]
 	public void Parse_SyllabicNasal_ShouldBeValid(string input, string initial, string final, string numbered) {
 		var syl = PinyinParser.Parse(input);
 		Assert.True(syl.IsValid, input);
@@ -118,6 +123,33 @@ public class NormalizationTests {
 	[InlineData("嗯", "na")]
 	[InlineData("㕶", "nu")]
 	public void SyllabicNasal_ShouldNotMatchOtherSyllables(string text, string search) {
+		Assert.False(_matcher.Contains(text, search), $"{text} 不应匹配 {search}");
+	}
+
+	[Theory]
+	[InlineData("欸", "ê")]
+	[InlineData("欸", "ê̄")]
+	[InlineData("欸", "ế")]
+	[InlineData("欸", "ề")]
+	[InlineData("欸", "ê1")]
+	[InlineData("欸", "ê2")]
+	[InlineData("欸", "ê3")]
+	[InlineData("誒", "ê")]
+	[InlineData("誒", "ề")]
+	public void ECircumflexSyllable_ShouldMatch(string text, string search) {
+		Assert.True(_matcher.Contains(text, search), $"{text} 应匹配 {search}");
+		Assert.Equal(new Range(0, 1), _matcher.FindFirstMatch(text, search));
+	}
+
+	[Fact]
+	public void ECircumflex_HanziItself_ShouldMatch() {
+		Assert.Equal(new Range(0, 1), _matcher.FindFirstMatch("欸", "欸"));
+	}
+
+	[Theory]
+	[InlineData("三", "ê")]
+	[InlineData("欸", "ê5")]
+	public void ECircumflex_ShouldNotMatchOtherSyllables(string text, string search) {
 		Assert.False(_matcher.Contains(text, search), $"{text} 不应匹配 {search}");
 	}
 

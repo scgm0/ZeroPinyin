@@ -78,6 +78,8 @@ public sealed class PinyinQuery {
 						ulong b = search[s + len - 1];
 						if (b is >= 'A' and <= 'Z') {
 							b |= 0x20;
+						} else if (b == 'Ê') {
+							b = 'ê';
 						}
 
 						encoded |= b << (len - 1) * 8;
@@ -758,7 +760,7 @@ public sealed class PinyinQuery {
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static private bool IsPinyinChar(char c) => c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '5';
+	static private bool IsPinyinChar(char c) => c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '5' or 'ê' or 'Ê';
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static private bool IsFuzzyEqual(PinyinSyllable searchSyl, PinyinSyllable textSyl, FuzzyConfig config) {

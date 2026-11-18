@@ -12,14 +12,14 @@ public static class PinyinParser {
 
 	/// <summary>
 	/// 韵母表（v 表示 ü 韵母，如 lv = lü）；j/q/x/y 后的 ü 按正词法写作 u（如 xue = xüe、ju = jü）。
-	/// 表尾为叹词的成音节鼻音（如 嗯 n/ng、呣 m），也可跟在 h 后（哼 hng、噷 hm）。
+	/// 表尾为叹词的成音节鼻音（如 嗯 n/ng、呣 m，跟在 h 后即 hng/hm）与 ê（如 欸、誒）。
 	/// </summary>
 	public static readonly string[] FinalList = [
 		"a", "o", "e", "ai", "ei", "ao", "ou", "an", "en", "ang", "eng", "ong", "er",
 		"i", "ia", "ie", "iao", "iu", "ian", "in", "iang", "ing", "iong",
 		"u", "ua", "uo", "uai", "ui", "uan", "un", "uang", "ueng", "ue",
 		"v", "ve", "van", "vn",
-		"m", "n", "ng"
+		"m", "n", "ng", "ê"
 	];
 
 	/// <summary>判断字符是否为 j/q/x/y（ü 在正词法中写作 u 的声母，忽略大小写）。</summary>
@@ -43,7 +43,8 @@ public static class PinyinParser {
 		'ī' or 'í' or 'ǐ' or 'ì' or
 		'ō' or 'ó' or 'ǒ' or 'ò' or
 		'ū' or 'ú' or 'ǔ' or 'ù' or
-		'ḿ' or 'ń' or 'ň' or 'ǹ');
+		'ḿ' or 'ń' or 'ň' or 'ǹ' or
+		'ế' or 'ề' or 'ể' or 'ễ' or 'ệ');
 
 	/// <summary>组合声调符对应的声调（U+0300 重音符=4、U+0301 锐音符=2、U+0304 长音符=1、U+030C 抑扬符=3）。</summary>
 	/// <param name="c">待判断字符。</param>
@@ -106,6 +107,11 @@ public static class PinyinParser {
 				'ń' => ('n', 2),
 				'ň' => ('n', 3),
 				'ǹ' => ('n', 4),
+				'ế' => ('ê', 2), // ê 的带调形式（欸/誒）；更简单的 ēi/éi 等写法亦可匹配
+				'ề' => ('ê', 4),
+				'ể' => ('ê', 3),
+				'ệ' => ('ê', 4),
+				'ễ' => ('ê', 0),
 				_ => (c, 0)
 			};
 
