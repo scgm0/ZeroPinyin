@@ -155,12 +155,7 @@ public sealed class PinyinMatcher {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static private bool NeedsNormalization(ReadOnlySpan<char> search) {
 		foreach (var c in search) {
-			if (c is 'ü' or 'ǖ' or 'ǘ' or 'ǚ' or 'ǜ' or
-				'ā' or 'á' or 'ǎ' or 'à' or
-				'ē' or 'é' or 'ě' or 'è' or
-				'ī' or 'í' or 'ǐ' or 'ì' or
-				'ō' or 'ó' or 'ǒ' or 'ò' or
-				'ū' or 'ú' or 'ǔ' or 'ù') {
+			if (PinyinParser.IsNormalizableChar(c)) {
 				return true;
 			}
 		}

@@ -10,6 +10,10 @@ public class NormalizationTests {
 	[InlineData("nǚ", "nv3")]
 	[InlineData("zhōng", "zhong1")]
 	[InlineData("yangmao", "yangmao")]
+	[InlineData("ḿ", "m2")]   // 成音节鼻音
+	[InlineData("ňg", "ng3")]
+	[InlineData("m\u0300", "m4")] // m + 组合重音符
+	[InlineData("n\u0304", "n1")] // n + 组合长音符
 	public void RemoveToneMarks_ShouldNormalize(string input, string expected) {
 		Span<char> buf = stackalloc char[64];
 		var len = PinyinParser.RemoveToneMarks(input, buf);
@@ -67,11 +71,67 @@ public class NormalizationTests {
 		Assert.Equal(expected, syl.Numbered);
 	}
 
+	[Theory]
+	[InlineData("n4", "", "n", "n4")]
+	[InlineData("ng2", "", "ng", "ng2")]
+	[InlineData("hng", "h", "ng", "hng")]
+	[InlineData("hm", "h", "m", "hm")]
+	public void Parse_SyllabicNasal_ShouldBeValid(string input, string initial, string final, string numbered) {
+		var syl = PinyinParser.Parse(input);
+		Assert.True(syl.IsValid, input);
+		Assert.Equal(initial, syl.Initial);
+		Assert.Equal(final, syl.Final);
+		Assert.Equal(numbered, syl.Numbered);
+	}
+
 	[Fact]
 	public void DataEnd_UnicodeUmlautChars_ShouldBeParsed() {
 		Assert.True(_matcher.Contains("㑼", "lüè"));
 		Assert.True(_matcher.Contains("㑼", "lve4"));
 		Assert.True(_matcher.Contains("绿", "lv4"));
+	}
+
+	[Theory]
+	[InlineData("嗯", "n")]
+	[InlineData("嗯", "ng")]
+	[InlineData("嗯", "n2")]  // ń
+	[InlineData("嗯", "ǹ")]   // ǹ → n4
+	[InlineData("嗯", "n4")]
+	[InlineData("㕶", "n")]
+	[InlineData("㕶", "ňg")]  // ňg → ng3
+	[InlineData("呣", "m")]
+	[InlineData("哼", "hng")]
+	[InlineData("噷", "hm")]
+	public void SyllabicNasal_ShouldMatch(string text, string search) {
+		Assert.True(_matcher.Contains(text, search), $"{text} 应匹配 {search}");
+		Assert.True(_matcher.FindFirstIndex(text, search) >= 0, $"{text} 应能定位 {search}");
+	}
+
+	[Fact]
+	public void SyllabicNasal_HanziItself_ShouldMatch() {
+		Assert.Equal(new Range(0, 1), _matcher.FindFirstMatch("嗯", "嗯"));
+		Assert.Equal(new Range(0, 1), _matcher.FindFirstMatch("㕶", "㕶"));
+	}
+
+	[Theory]
+	[InlineData("嗯", "ni")]
+	[InlineData("嗯", "na")]
+	[InlineData("㕶", "nu")]
+	public void SyllabicNasal_ShouldNotMatchOtherSyllables(string text, string search) {
+		Assert.False(_matcher.Contains(text, search), $"{text} 不应匹配 {search}");
+	}
+
+	[Fact]
+	public void IsNormalizableChar_ShouldMatchRemoveToneMarks() {
+		// 防漂移：凡 RemoveToneMarks 会改变结果的字符，必须被 IsNormalizableChar 识别（否则搜索串不会触发归一化）
+		Span<char> buf = stackalloc char[2];
+		for (var i = 0; i < 0x10000; i++) {
+			var c = (char)i;
+			var len = PinyinParser.RemoveToneMarks([c], buf);
+			var changed = len != 1 || buf[0] != c;
+			Assert.True(changed == PinyinParser.IsNormalizableChar(c),
+				$"U+{(int)c:X4} changed={changed} out=[{(len == 1 ? buf[0].ToString() : buf[..len].ToString())}]");
+		}
 	}
 
 	[Fact]
